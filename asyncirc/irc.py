@@ -169,6 +169,12 @@ def _redispatch_kick(message):
     channel, kickee, reason = get_channel(message.params[0]), get_user(message.params[1]), message.params[2]
     signal("kick").send(message, kicker=kicker, kickee=kickee, channel=channel, reason=reason)
 
+def _redispatch_nick(message):
+    message.client.logger.debug("Redispatching NICK {}".format(message))
+    old_user = get_user(message.source)
+    new_nick = message.params[0]
+    signal("nick").send(message, user=old_user, new_nick=new_nick)
+
 ## public functional API
 
 def connect(server, port=6697, use_ssl=True):
