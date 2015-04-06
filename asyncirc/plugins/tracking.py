@@ -107,7 +107,9 @@ def handle_who_response(message):
 @join.connect
 def handle_join(message, user, channel):
     if user.nick == message.client.nickname:
-        message.client.writeln("WHO {}".format(channel.channel))
+        channel_str = channel.channel
+        print("WHO {}".format(channel_str))
+        message.client.writeln("WHO {}".format(channel_str))
     registry.mappings.add((user, channel))
 
 @part.connect
