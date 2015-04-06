@@ -18,7 +18,7 @@ class User:
         self.host = host
 
     def _get_channels(self):
-        return filter(lambda x: x[0] == self, registry.mappings)
+        return map(lambda x: x[1], filter(lambda x: x[0] == self, registry.mappings))
 
     def __repr__(self):
         return "User {}!{}@{}".format(self.nick, self.user, self.host)
@@ -30,7 +30,7 @@ class Channel:
         self.channel = channel
 
     def _get_users(self):
-        return filter(lambda x: x[1] == self, registry.mappings)
+        return map(lambda x: x[0], filter(lambda x: x[1] == self, registry.mappings))
 
     def __repr__(self):
         return "Channel {}".format(self.channel)
@@ -41,7 +41,7 @@ class Target:
     def __init__(self, target):
         self.target = target
 
-    def get(self):
+    def trackable(self):
         if self.target[0] == '#':
             return get_channel(self.target)
         return get_user(self.target)
