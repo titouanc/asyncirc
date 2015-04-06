@@ -20,6 +20,9 @@ class User:
     def _get_channels(self):
         return filter(lambda x: x[0] == self, registry.mappings)
 
+    def __repr__(self):
+        return "User {}!{}@{}".format(self.nick, self.user, self.host)
+
     channels = property(_get_channels)
 
 class Channel:
@@ -29,7 +32,19 @@ class Channel:
     def _get_users(self):
         return filter(lambda x: x[1] == self, registry.mappings)
 
+    def __repr__(self):
+        return "Channel {}".format(self.channel)
+
     users = property(_get_users)
+
+class Target:
+    def __init__(self, target):
+        self.target = target
+
+    def get(self):
+        if self.target[0] == '#':
+            return get_channel(self.target)
+        return get_user(self.target)
 
 ## utility functions
 
@@ -66,8 +81,12 @@ def get_channel(x):
         registry.channels[x] = Channel(x)
     return registry.channels[x]
 
+def get_target(x):
+    return Target(x)
+
 asyncirc.irc.get_user = get_user
 asyncirc.irc.get_channel = get_channel
+asyncirc.irc.get_target = get_target
 
 ## signal definitions
 

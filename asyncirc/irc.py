@@ -120,6 +120,9 @@ def get_user(hostmask):
 def get_channel(channel):
     return channel
 
+def get_target(x):
+    return x
+
 ## default listener functions
 
 def _pong(message):
@@ -128,7 +131,7 @@ def _pong(message):
 
 def _redispatch_message_common(message, type):
     target, text = get_channel(message.params[0]), message.params[1]
-    user = get_user(message.source)
+    user = get_target(message.source)
     signal(type).send(message, user=user, target=target, text=text)
     if target == message.client.nickname:
         signal("private-{}".format(type)).send(message, user=user, target=target, text=text)
