@@ -1,12 +1,25 @@
 import asyncio
 import base64
 import functools
+import importlib
 import logging
 import socket
 import ssl
 from blinker import signal
 from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
+
+plugins = []
+def plugin_registered_handler(plugin_name):
+    logging.getLogger("asyncirc.plugins").info("Plugin {} registered".format(plugin_name))
+    plugins.append(plugin_name)
+
+signal("plugin-registered").connect(plugin_registered_handler)
+
+def load_plugins(*plugins):
+    for plugin in plugins:
+        if plugin not in plugins:
+            importlib.import_module(plugin)
 
 class User:
     def __init__(self, nick, user, host):

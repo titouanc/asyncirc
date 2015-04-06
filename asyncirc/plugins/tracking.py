@@ -132,3 +132,4 @@ def handle_nick(message, user, new_nick):
     registry.users[new_nick] = user
 
 logger.info("Plugin registered")
+signal("plugin-registered").send("asyncirc.plugins.tracking")

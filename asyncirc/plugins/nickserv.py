@@ -11,3 +11,4 @@ def handle_nickserv_notices(client, user, target, text):
 signal("private-notice").connect(handle_nickserv_notices)
 
 logger.info("Plugin registered")
+signal("plugin-registered").send("asyncirc.plugins.nickserv")
