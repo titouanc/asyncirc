@@ -66,8 +66,8 @@ def get_channel(x):
         registry.channels[x] = Channel(x)
     return registry.channels[x]
 
-asyncirc.get_user = get_user
-asyncirc.get_channel = get_channel
+asyncirc.irc.get_user = get_user
+asyncirc.irc.get_channel = get_channel
 
 ## signal definitions
 
