@@ -22,9 +22,6 @@ class User:
             return self(nick, user, host)
         return self(None, None, hostmask)
 
-class CapFailedException(Exception): pass
-class AuthenticationFailedException(Exception): pass
-
 class IRCProtocol(asyncio.Protocol):
 
     ## Required by asyncio.Protocol
@@ -88,7 +85,6 @@ class IRCProtocol(asyncio.Protocol):
         signal("irc-ping").connect(_pong)
         signal("irc-privmsg").connect(_redispatch_privmsg)
         signal("irc-notice").connect(_redispatch_notice)
-        signal("irc-cap").connect(_handle_cap)
         signal("irc-join").connect(_redispatch_join)
         signal("irc-part").connect(_redispatch_part)
         signal("irc-quit").connect(_redispatch_quit)
@@ -103,14 +99,16 @@ class IRCProtocol(asyncio.Protocol):
         channels_str = ",".join(channels)
         self.writeln("JOIN {}".format(channels_str))
 
-## cap handlers
-def _handle_cap(message):
-    result = message.params[1].lower()
-    cap = message.params[2].lower()
-    if result != "ack":
-        raise CapFailedException("Capability negotiation for {} failed".format(cap))
-    message.client.logger.info("Capability negotiation for {} succeeded".format(cap))
-    signal("cap-success", cap)
+    def part(self, channels):
+        if not isinstance(channels, list):
+            channels = [channels]
+        channels_str = ",".join(channels)
+        self.writeln("PART {}".format(channels_str))
+
+    def say(self, target_str, message):
+        while message:
+            self.writeln("PRIVMSG {} :{}".format(target_str, message[:400]))
+            message = message[400:]
 
 ## for redefining (i.e. channel-tracking mechanism)
 
