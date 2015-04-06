@@ -75,7 +75,8 @@ def get_user(x):
 
     # we don't know about this user yet, so return a dummy.
     # FIXME it would probably be a good idea to /whois here
-    return User(nick, None, None)
+    registry.users[nick] = User(nick, None, None)
+    return registry.users[nick]
 
 def get_channel(x):
     if x not in registry.channels:
@@ -102,18 +103,17 @@ who_response = signal("irc-352")
 @who_response.connect
 def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
-    handle_join(message, get_user("{}!{}@{}".format(nick, ident, host)), channel)
+    user = get_user("{}!{}@{}".format(nick, ident, host))
+    handle_join(message, user, channel)
 
 @join.connect
 def handle_join(message, user, channel):
-    get_user(user); get_channel(channel)
     if user.nick == message.client.nickname:
-        message.client.writeln("WHO {}".format(channel))
+        message.client.writeln("WHO {}".format(channel.channel))
     registry.mappings.add((user, channel))
 
 @part.connect
 def handle_part(message, user, channel, reason):
-    get_user(user); get_channel(channel)
     registry.mappings.discard((user, channel))
 
 @quit.connect
