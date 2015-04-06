@@ -92,6 +92,8 @@ class IRCProtocol(asyncio.Protocol):
         signal("irc-join").connect(_redispatch_join)
         signal("irc-part").connect(_redispatch_part)
         signal("irc-quit").connect(_redispatch_quit)
+        signal("irc-kick").connect(_redispatch_kick)
+        signal("irc-nick").connect(_redispatch_nick)
 
     ## protocol abstractions
 
