@@ -119,7 +119,7 @@ def handle_part(message, user, channel, reason):
 @quit.connect
 def handle_quit(message, user, reason):
     del registry.users[user.nick]
-    for channel in user.channels:
+    for channel in set(user.channels):
         registry.mappings.discard((user, channel))
 
 @kick.connect
