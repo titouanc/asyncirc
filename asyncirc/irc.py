@@ -35,6 +35,8 @@ class IRCProtocol(asyncio.Protocol):
         self.buf = ""
         self.nickname = ""
 
+        signal("connected").send(self)
+
         self.logger.info("Connection success.")
         self.attach_default_listeners()
 
@@ -87,6 +89,9 @@ class IRCProtocol(asyncio.Protocol):
         signal("irc-privmsg").connect(_redispatch_privmsg)
         signal("irc-notice").connect(_redispatch_notice)
         signal("irc-cap").connect(_handle_cap)
+        signal("irc-join").connect(_redispatch_join)
+        signal("irc-part").connect(_redispatch_part)
+        signal("irc-quit").connect(_redispatch_quit)
 
     ## protocol abstractions
 
@@ -105,6 +110,16 @@ def _handle_cap(message):
     message.client.logger.info("Capability negotiation for {} succeeded".format(cap))
     signal("cap-success", cap)
 
+## for redefining (i.e. channel-tracking mechanism)
+
+def get_user(hostmask):
+    if "!" not in hostmask or "@" not in hostmask:
+        return hostmask
+    return User.from_hostmask(hostmask)
+
+def get_channel(channel):
+    return channel
+
 ## default listener functions
 
 def _pong(message):
@@ -112,13 +127,13 @@ def _pong(message):
     message.client.writeln("PONG {}".format(message.params[0]))
 
 def _redispatch_message_common(message, type):
-    target, text = message.params
-    user = User.from_hostmask(message.source)
-    signal(type).send(message.client, user=user, target=target, text=text)
+    target, text = get_channel(message.params[0]), message.params[1]
+    user = get_user(message.source)
+    signal(type).send(message, user=user, target=target, text=text)
     if target == message.client.nickname:
-        signal("private-{}".format(type)).send(message.client, user=user, target=target, text=text)
+        signal("private-{}".format(type)).send(message, user=user, target=target, text=text)
     else:
-        signal("public-{}".format(type)).send(message.client, user=user, target=target, text=text)
+        signal("public-{}".format(type)).send(message, user=user, target=target, text=text)
 
 def _redispatch_privmsg(message):
     message.client.logger.debug("Redispatching PRIVMSG {}".format(message))
@@ -127,6 +142,32 @@ def _redispatch_privmsg(message):
 def _redispatch_notice(message):
     message.client.logger.debug("Redispatching NOTICE {}".format(message))
     _redispatch_message_common(message, "notice")
+
+def _redispatch_join(message):
+    message.client.logger.debug("Redispatching JOIN {}".format(message))
+    user = get_user(message.source)
+    channel = get_channel(message.params[0])
+    signal("join").send(message, user=user, channel=channel)
+
+def _redispatch_part(message):
+    message.client.logger.debug("Redispatching PART {}".format(message))
+    user = get_user(message.source)
+    channel, reason = get_channel(message.params[0]), None
+    if len(message.params) > 1:
+        reason = message.params[1]
+    signal("part").send(message, user=user, channel=channel, reason=reason)
+
+def _redispatch_quit(message):
+    message.client.logger.debug("Redispatching QUIT {}".format(message))
+    user = get_user(message.source)
+    reason = message.params[0]
+    signal("quit").send(message, user=user, reason=reason)
+
+def _redispatch_kick(message):
+    message.client.logger.debug("Redispatching KICK {}".format(message))
+    kicker = get_user(message.source)
+    channel, kickee, reason = get_channel(message.params[0]), get_user(message.params[1]), message.params[2]
+    signal("kick").send(message, kicker=kicker, kickee=kickee, channel=channel, reason=reason)
 
 ## public functional API
 
