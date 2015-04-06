@@ -106,16 +106,19 @@ def handle_who_response(message):
 
 @join.connect
 def handle_join(message, user, channel):
+    get_user(user); get_channel(channel)
     if user.nick == message.client.nickname:
         message.client.writeln("WHO {}".format(channel))
     registry.mappings.add((user, channel))
 
 @part.connect
 def handle_part(message, user, channel, reason):
+    get_user(user); get_channel(channel)
     registry.mappings.discard((user, channel))
 
 @quit.connect
 def handle_quit(message, user, reason):
+    del registry.users[user.nick]
     for channel in user.channels:
         registry.mappings.discard((user, channel))
 
