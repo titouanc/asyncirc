@@ -1,7 +1,5 @@
 import asyncirc
-import logging
 from blinker import signal
-logger = logging.getLogger("asyncirc.plugins.tracking")
 
 class Registry:
     def __init__(self):
@@ -134,5 +132,4 @@ def handle_nick(message, user, new_nick):
     del registry.users[old_nick]
     registry.users[new_nick] = user
 
-logger.info("Plugin registered")
 signal("plugin-registered").send("asyncirc.plugins.tracking")
