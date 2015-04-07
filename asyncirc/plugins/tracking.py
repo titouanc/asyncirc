@@ -1,4 +1,5 @@
 import asyncirc
+import asyncirc.irc
 from blinker import signal
 
 class Registry:
@@ -105,6 +106,7 @@ quit = signal("quit")
 kick = signal("kick")
 nick = signal("nick")
 who_response = signal("irc-352")
+who_done = signal("irc-315")
 ## event handlers
 
 @who_response.connect
@@ -112,6 +114,10 @@ def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
     user = get_user("{}!{}@{}".format(nick, ident, host))
     handle_join(message, user, channel, real=False)
+
+@who_done.connect
+def handle_who_done(message):
+    signal("sync-done").send(message.params[1])
 
 @join.connect
 def handle_join(message, user, channel, real=True):
