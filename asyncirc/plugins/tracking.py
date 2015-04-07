@@ -114,7 +114,6 @@ def handle_join(message, user, channel, real=True):
     if isinstance(channel, Channel):
         channel = channel.channel
     if user.nick == message.client.nickname and real:
-        print(channel)
         message.client.writeln("WHO {}".format(channel))
     registry.mappings.add((user, channel))
 
