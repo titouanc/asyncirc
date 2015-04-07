@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
         name="asyncio-irc",
-        version="0.1.5",
+        version="0.1.6",
         description="irc based on asyncio",
         author="Fox Wilson",
         author_email="fwilson@fwilson.me",
