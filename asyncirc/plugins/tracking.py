@@ -56,6 +56,9 @@ def parse_hostmask(hostmask):
 
 ## things we redefine
 
+def new_say(self, target, message):
+    self._say(target.target, message)
+
 def get_user(x):
     nick, user, host = parse_hostmask(x)
     if nick in registry.users:
@@ -87,6 +90,8 @@ def get_target(x):
 asyncirc.irc.get_user = get_user
 asyncirc.irc.get_channel = get_channel
 asyncirc.irc.get_target = get_target
+asyncirc.irc.IRCProtocol._say = asyncirc.irc.IRCProtocol.say
+asyncirc.irc.IRCProtocol.say = new_say
 
 ## signal definitions
 
@@ -102,14 +107,15 @@ who_response = signal("irc-352")
 def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
     user = get_user("{}!{}@{}".format(nick, ident, host))
-    handle_join(message, user, channel)
+    handle_join(message, user, channel, real=False)
 
 @join.connect
-def handle_join(message, user, channel):
-    if user.nick == message.client.nickname:
-        channel_str = channel.channel
-        print("WHO {}".format(channel_str))
-        message.client.writeln("WHO {}".format(channel_str))
+def handle_join(message, user, channel, real=True):
+    if isinstance(channel, Channel):
+        channel = channel.channel
+    if user.nick == message.client.nickname and real:
+        print(channel)
+        message.client.writeln("WHO {}".format(channel))
     registry.mappings.add((user, channel))
 
 @part.connect

@@ -8,7 +8,6 @@ import ssl
 from blinker import signal
 from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
-logging.basicConfig(level=logging.INFO)
 
 plugins = []
 def plugin_registered_handler(plugin_name):
