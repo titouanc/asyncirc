@@ -4,6 +4,7 @@ from blinker import signal
 class Registry:
     def __init__(self):
         self.mappings = set()
+        # mappings contains two-tuples (user, channel)
         self.users = {}
         self.channels = {}
 
@@ -27,6 +28,7 @@ class User:
 class Channel:
     def __init__(self, channel):
         self.channel = channel
+        self.available = False
 
     def _get_users(self):
         return map(lambda x: x[0], filter(lambda x: x[1] == self, registry.mappings))
@@ -75,6 +77,8 @@ def get_user(x):
         return User(nick, nick, nick)
 
     # we don't know about this user yet, so return a dummy.
+    # this will be updated when get_user is called again with the same nick
+    # and a full hostmask
     # FIXME it would probably be a good idea to /whois here
     registry.users[nick] = User(nick, None, None)
     return registry.users[nick]
@@ -115,10 +119,13 @@ def handle_join(message, user, channel, real=True):
         channel = channel.channel
     if user.nick == message.client.nickname and real:
         message.client.writeln("WHO {}".format(channel))
+        channel.available = True
     registry.mappings.add((user, channel))
 
 @part.connect
 def handle_part(message, user, channel, reason):
+    if user.nick == message.client.nickname:
+        channel.available = False
     registry.mappings.discard((user, channel))
 
 @quit.connect
