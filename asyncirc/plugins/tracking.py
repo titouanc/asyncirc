@@ -57,6 +57,47 @@ def parse_hostmask(hostmask):
         return nick, user, host
     return hostmask, None, None
 
+## things we redefine
+
+def new_say(self, target, message):
+    self._say(target.target, message)
+
+def get_user(x):
+    nick, user, host = parse_hostmask(x)
+    if nick in registry.users:
+        if user is not None and host is not None:
+            registry.users[nick].user = user
+            registry.users[nick].host = host
+        return registry.users[nick]
+
+    if user is not None and host is not None:
+        registry.users[nick] = User(nick, user, host)
+        return registry.users[nick]
+
+    if "." in nick: # it's probably a server
+        return User(nick, nick, nick)
+
+    # we don't know about this user yet, so return a dummy.
+    # this will be updated when get_user is called again with the same nick
+    # and a full hostmask
+    # FIXME it would probably be a good idea to /whois here
+    registry.users[nick] = User(nick, None, None)
+    return registry.users[nick]
+
+def get_channel(x):
+    if x not in registry.channels:
+        registry.channels[x] = Channel(x)
+    return registry.channels[x]
+
+def get_target(x):
+    return Target(x)
+
+asyncirc.irc.get_user = get_user
+asyncirc.irc.get_channel = get_channel
+asyncirc.irc.get_target = get_target
+asyncirc.irc.IRCProtocol._say = asyncirc.irc.IRCProtocol.say
+asyncirc.irc.IRCProtocol.say = new_say
+
 ## signal definitions
 
 join = signal("join")
