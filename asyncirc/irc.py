@@ -26,6 +26,7 @@ class User:
         self.nick = nick
         self.user = user
         self.host = host
+        self.hostmask = "{}!{}@{}".format(nick, user, host)
 
     @classmethod
     def from_hostmask(self, hostmask):
