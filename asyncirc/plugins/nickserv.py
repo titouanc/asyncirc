@@ -6,5 +6,5 @@ def handle_nickserv_notices(message, user, target, text):
     if "Invalid password" in text:
         signal("nickserv-auth-fail").send(text)
 
-signal("notice").connect(handle_nickserv_notices)
+signal("private-notice").connect(handle_nickserv_notices)
 signal("plugin-registered").send("asyncirc.plugins.nickserv")
