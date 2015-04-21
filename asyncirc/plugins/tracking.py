@@ -19,7 +19,7 @@ class User:
         self.previous_nicks = []
 
     def _get_channels(self):
-        return map(lambda x: x[1], filter(lambda x: x[0] == self, registry.mappings))
+        return map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registry.mappings))
 
     def __repr__(self):
         return "User {}!{}@{}".format(self.nick, self.user, self.host)
@@ -34,7 +34,7 @@ class Channel:
         self.state = set()
 
     def _get_users(self):
-        return map(lambda x: x[0], filter(lambda x: x[1] == self, registry.mappings))
+        return map(lambda x: x[0], filter(lambda x: x[1] == self.channel, registry.mappings))
 
     def __repr__(self):
         return "Channel {}".format(self.channel)
