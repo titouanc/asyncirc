@@ -57,10 +57,7 @@ def parse_hostmask(hostmask):
         return nick, user, host
     return hostmask, None, None
 
-## things we redefine
-
-def new_say(self, target, message):
-    self._say(target.target, message)
+## things we actually really don't want to redefine
 
 def get_user(x):
     nick, user, host = parse_hostmask(x)
@@ -91,12 +88,6 @@ def get_channel(x):
 
 def get_target(x):
     return Target(x)
-
-asyncirc.irc.get_user = get_user
-asyncirc.irc.get_channel = get_channel
-asyncirc.irc.get_target = get_target
-asyncirc.irc.IRCProtocol._say = asyncirc.irc.IRCProtocol.say
-asyncirc.irc.IRCProtocol.say = new_say
 
 ## signal definitions
 
