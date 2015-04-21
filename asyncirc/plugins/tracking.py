@@ -117,7 +117,7 @@ def check_sync_done(channel):
 def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
     user = get_user("{}!{}@{}".format(nick, ident, host))
-    handle_join(message, nick, channel, real=False)
+    handle_join(message, user, channel, real=False)
 
 @channel_mode.connect
 def handle_received_mode(message):
@@ -136,10 +136,10 @@ def handle_who_done(message):
 
 @join.connect
 def handle_join(message, user, channel, real=True):
-    if user == message.client.nickname and real:
+    if user.nick == message.client.nickname and real:
         sync_channel(message.client, channel)
         get_channel(channel).available = True
-    registry.mappings.add((user, channel))
+    registry.mappings.add((user.nick, channel))
 
 @part.connect
 def handle_part(message, user, channel, reason):
