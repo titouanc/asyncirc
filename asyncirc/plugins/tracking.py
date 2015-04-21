@@ -30,6 +30,8 @@ class Channel:
     def __init__(self, channel):
         self.channel = channel
         self.available = False
+        self.mode = ""
+        self.state = set()
 
     def _get_users(self):
         return map(lambda x: x[0], filter(lambda x: x[1] == self, registry.mappings))
@@ -98,6 +100,17 @@ kick = signal("kick")
 nick = signal("nick")
 who_response = signal("irc-352")
 who_done = signal("irc-315")
+channel_mode = signal("irc-324")
+
+def sync_channel(client, channel):
+    client.writeln("WHO {}".format(channel))
+    client.writeln("MODE {}".format(channel))
+
+sync_complete_set = {"mode", "who"}
+def check_sync_done(channel):
+    if get_channel(channel).state == sync_complete_set:
+        signal("sync-done").send(channel)
+
 ## event handlers
 
 @who_response.connect
@@ -106,16 +119,25 @@ def handle_who_response(message):
     user = get_user("{}!{}@{}".format(nick, ident, host))
     handle_join(message, user, channel, real=False)
 
+@channel_mode.connect
+def handle_received_mode(message):
+    channel, mode = message.params[1], message.params[2]
+    channel_obj = get_channel(channel)
+    channel_obj.mode = mode
+    channel_obj.state = channel_obj.state | {"mode"}
+    check_sync_done(channel)
+
 @who_done.connect
 def handle_who_done(message):
-    signal("sync-done").send(message.params[1])
+    channel = message.params[1]
+    channel_obj = get_channel(channel)
+    channel_obj.state = channel_obj.state | {"who"}
+    check_sync_done(channel)
 
 @join.connect
 def handle_join(message, user, channel, real=True):
-    if isinstance(channel, Channel):
-        channel = channel.channel
     if user.nick == message.client.nickname and real:
-        message.client.writeln("WHO {}".format(channel))
+        sync_channel(message.client, channel)
         get_channel(channel).available = True
     registry.mappings.add((user, channel))
 
