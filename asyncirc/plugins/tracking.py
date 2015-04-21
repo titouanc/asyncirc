@@ -116,13 +116,13 @@ def handle_join(message, user, channel, real=True):
         channel = channel.channel
     if user.nick == message.client.nickname and real:
         message.client.writeln("WHO {}".format(channel))
-        channel.available = True
+        get_channel(channel).available = True
     registry.mappings.add((user, channel))
 
 @part.connect
 def handle_part(message, user, channel, reason):
     if user.nick == message.client.nickname:
-        channel.available = False
+        get_channel(channel).available = False
     registry.mappings.discard((user, channel))
 
 @quit.connect
