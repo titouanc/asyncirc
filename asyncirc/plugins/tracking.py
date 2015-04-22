@@ -16,6 +16,7 @@ class User:
         self.nick = nick
         self.user = user
         self.host = host
+        self.account = None
         self.previous_nicks = []
 
     def _get_channels(self):
@@ -94,16 +95,19 @@ def get_target(x):
 ## signal definitions
 
 join = signal("join")
+extjoin = signal("irc-join")
+account = signal("irc-account")
 part = signal("part")
 quit = signal("quit")
 kick = signal("kick")
 nick = signal("nick")
+extwho_response = signal("irc-354")
 who_response = signal("irc-352")
 who_done = signal("irc-315")
 channel_mode = signal("irc-324")
 
 def sync_channel(client, channel):
-    client.writeln("WHO {}".format(channel))
+    client.writeln("WHO {} %cnuha".format(channel))
     client.writeln("MODE {}".format(channel))
 
 sync_complete_set = {"mode", "who"}
@@ -112,6 +116,13 @@ def check_sync_done(channel):
         signal("sync-done").send(channel)
 
 ## event handlers
+
+@extwho_response.connect
+def handle_extwho_response(message):
+    mynick, channel, ident, host, nick, account = message.params
+    user = get_user("{}!{}@{}".format(nick, ident, host))
+    user.account = account if account != "0" else None
+    handle_join(message, user, channel, real=False)
 
 @who_response.connect
 def handle_who_response(message):
@@ -141,17 +152,29 @@ def handle_join(message, user, channel, real=True):
         get_channel(channel).available = True
     registry.mappings.add((user.nick, channel))
 
+@extjoin.connect
+def handle_extjoin(message):
+    account = message.params[1]
+    get_user(message.source).account = account if account != "*" else None
+
+@account.connect
+def account_notify(message):
+    account = message.params[0]
+    get_user(message.source).account = account if account != "*" else None
+
 @part.connect
 def handle_part(message, user, channel, reason):
+    user = get_user(user.nick)
     if user == message.client.nickname:
         get_channel(channel).available = False
-    registry.mappings.discard((user, channel))
+    registry.mappings.discard((user.nick, channel))
 
 @quit.connect
 def handle_quit(message, user, reason):
+    user = get_user(user.nick)
     del registry.users[user.nick]
     for channel in set(user.channels):
-        registry.mappings.discard((user, channel))
+        registry.mappings.discard((user.nick, channel))
 
 @kick.connect
 def handle_kick(message, kicker, kickee, channel, reason):

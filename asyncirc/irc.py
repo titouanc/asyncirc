@@ -45,6 +45,7 @@ class IRCProtocol(asyncio.Protocol):
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
         self.buf = ""
         self.nickname = ""
+        self.caps = set()
 
         signal("connected").send(self)
 
