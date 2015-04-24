@@ -107,7 +107,10 @@ who_done = signal("irc-315")
 channel_mode = signal("irc-324")
 
 def sync_channel(client, channel):
-    client.writeln("WHO {} %cnuha".format(channel))
+    if client.server_supports["WHOX"]:
+        client.writeln("WHO {} %cnuha".format(channel))
+    else:
+        client.writeln("WHO {}".format(channel))
     client.writeln("MODE {}".format(channel))
 
 sync_complete_set = {"mode", "who"}

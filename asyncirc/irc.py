@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import collections
 import functools
 import importlib
 import logging
@@ -49,9 +50,7 @@ class IRCProtocol(asyncio.Protocol):
         self.caps = set()
 
         signal("connected").send(self)
-
         self.logger.info("Connection success.")
-        self.attach_default_listeners()
 
     def data_received(self, data):
         data = data.decode()
