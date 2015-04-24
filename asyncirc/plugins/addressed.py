@@ -1,8 +1,13 @@
 from blinker import signal
 
+command_character_registry = []
+
+def register_command_character(c):
+    command_character_registry.append(c)
+
 def handle_public_messages(message, user, target, text):
     prefix = message.client.nickname
-    triggers = [i.format(prefix) for i in ["{}: ", "{}, ", "{} "]]
+    triggers = [i.format(prefix) for i in ["{}: ", "{}, ", "{} "] + command_character_registry]
     for trigger in triggers:
         if text.startswith(trigger):
             text = text[len(trigger):]
