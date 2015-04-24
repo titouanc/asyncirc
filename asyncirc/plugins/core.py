@@ -48,7 +48,7 @@ def _redispatch_nick(message):
     signal("nick").send(message, user=old_user, new_nick=new_nick)
 
 def _server_supports(message):
-    supports = message.params[1:-1]
+    supports = message.params[1:]
     for feature in supports:
         if "=" in feature:
             k, v = feature.split("=")
