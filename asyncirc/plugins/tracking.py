@@ -157,6 +157,8 @@ def handle_join(message, user, channel, real=True):
 
 @extjoin.connect
 def handle_extjoin(message):
+    if "extended-join" not in message.client.caps:
+        return
     account = message.params[1]
     get_user(message.source).account = account if account != "*" else None
 

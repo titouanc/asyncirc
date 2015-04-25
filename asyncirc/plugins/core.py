@@ -72,9 +72,8 @@ def _nick_in_use(message):
 
 def _ping_servers():
     for client in ping_clients:
-        logger.debug("PINGing it's been {} seconds between the last ping and pong".format(client.last_pong - client.last_ping))
-        if client.last_pong - client.last_ping > 30:
-            client.connection_lost()
+        if client.last_pong != 0 and time.time() - client.last_pong > 90:
+            client.connection_lost(Exception())
         client.writeln("PING :GNIP")
         client.last_ping = time.time()
     asyncio.get_event_loop().call_later(60, _ping_servers)

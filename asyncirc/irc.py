@@ -43,13 +43,13 @@ class IRCProtocolWrapper:
     def __getattr__(self, attr):
         if attr in self.__dict__:
             return self.__dict__[attr]
-        return self.protocol.__dict__[attr]
+        return getattr(self.protocol, attr)
 
     def __attr__(self, attr, val):
         if attr == "protocol":
             self.protocol = val
         else:
-            self.protocol.__dict__[attr] = val
+            setattr(self.protocol, attr, val)
 
 class IRCProtocol(asyncio.Protocol):
 
