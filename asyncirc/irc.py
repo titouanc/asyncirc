@@ -36,13 +36,31 @@ class User:
             return self(nick, user, host)
         return self(None, None, hostmask)
 
+class IRCProtocolWrapper:
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    def __getattr__(self, attr):
+        if attr in self.__dict__:
+            return self.__dict__[attr]
+        return self.protocol.__dict__[attr]
+
+    def __attr__(self, attr, val):
+        if attr == "protocol":
+            self.protocol = val
+        else:
+            self.protocol.__dict__[attr] = val
+
 class IRCProtocol(asyncio.Protocol):
 
     ## Required by asyncio.Protocol
 
     def connection_made(self, transport):
         self.transport = transport
+        self.wrapper = None
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
+        self.last_ping = float('inf')
+        self.last_pong = 0
         self.buf = ""
         self.old_nickname = None
         self.nickname = ""
@@ -64,8 +82,8 @@ class IRCProtocol(asyncio.Protocol):
             signal("raw").send(self, text=line_received)
 
     def connection_lost(self, exc):
-        self.logger.info("Connection lost; stopping event loop.")
-        loop.stop()
+        self.logger.critical("Connection lost.")
+        signal("connection-lost").send(self.wrapper)
 
     ## Core helper functions
 
@@ -125,6 +143,18 @@ def get_target(x):
 def connect(server, port=6697, use_ssl=True):
     connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
     transport, protocol = loop.run_until_complete(connector)
-    return protocol
+    protocol.wrapper = IRCProtocolWrapper(protocol)
+    protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
+    return protocol.wrapper
+
+def reconnect(client_wrapper):
+    loop.stop()
+    connector = loop.create_connection(IRCProtocol, **client.server_info)
+    transport, protocol = loop.run_until_complete(connector)
+    protocol.logger.critical("Reconnecting...")
+    client_wrapper.protocol = protocol
+    loop.run_forever()
+
+signal("connection-lost").connect(reconnect)
 
 import asyncirc.plugins.core

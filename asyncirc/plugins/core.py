@@ -1,7 +1,14 @@
 from blinker import signal
 from asyncirc.irc import get_target, get_user, get_channel
 from asyncirc.parser import RFC1459Message
+
+import asyncio
+import logging
 import random
+import time
+logger = logging.getLogger("asyncirc.plugins.core")
+
+ping_clients = []
 
 def _pong(message):
     message.client.writeln("PONG {}".format(message.params[0]))
@@ -63,6 +70,18 @@ def _nick_in_use(message):
     message.client.nickname = s
     message.client.writeln("NICK", s)
 
+def _ping_servers():
+    for client in ping_clients:
+        logger.debug("PINGing it's been {} seconds between the last ping and pong".format(client.last_pong - client.last_ping))
+        if client.last_pong - client.last_ping > 30:
+            client.connection_lost()
+        client.writeln("PING :GNIP")
+        client.last_ping = time.time()
+    asyncio.get_event_loop().call_later(60, _ping_servers)
+
+def _catch_pong(message):
+    message.client.last_pong = time.time()
+
 def _redispatch_irc(message):
     signal("irc-{}".format(message.verb.lower())).send(message)
 
@@ -71,9 +90,15 @@ def _redispatch_raw(client, text):
     message.client = client
     signal("irc").send(message)
 
+def _queue_ping(client):
+    ping_clients.append(client)
+    _ping_servers()
+
 signal("raw").connect(_redispatch_raw)
 signal("irc").connect(_redispatch_irc)
+signal("connected").connect(_queue_ping)
 signal("irc-ping").connect(_pong)
+signal("irc-pong").connect(_catch_pong)
 signal("irc-privmsg").connect(_redispatch_privmsg)
 signal("irc-notice").connect(_redispatch_notice)
 signal("irc-join").connect(_redispatch_join)
