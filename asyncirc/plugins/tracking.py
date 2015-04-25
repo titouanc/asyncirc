@@ -185,6 +185,7 @@ def handle_kick(message, kicker, kickee, channel, reason):
 
 @nick.connect
 def handle_nick(message, user, new_nick):
+    user = get_user(user.hostmask)
     old_nick = user.nick
     user.previous_nicks.append(old_nick)
     user.nick = new_nick

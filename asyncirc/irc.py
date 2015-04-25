@@ -12,9 +12,7 @@ loop = asyncio.get_event_loop()
 
 plugins = []
 def plugin_registered_handler(plugin_name):
-    logging.getLogger("asyncirc.plugins").info("Plugin {} registered".format(plugin_name))
     plugins.append(plugin_name)
-
 signal("plugin-registered").connect(plugin_registered_handler)
 
 def load_plugins(*plugins):
