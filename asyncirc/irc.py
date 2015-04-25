@@ -26,6 +26,7 @@ class User:
         self.user = user
         self.host = host
         self.hostmask = "{}!{}@{}".format(nick, user, host)
+        self._register_wait = 0
 
     @classmethod
     def from_hostmask(self, hostmask):
@@ -58,6 +59,7 @@ class IRCProtocol(asyncio.Protocol):
             index = self.buf.index("\n")
             line_received = self.buf[:index].strip()
             self.buf = self.buf[index + 1:]
+            self.logger.debug(line_received)
             signal("raw").send(self, text=line_received)
 
     def connection_lost(self, exc):
@@ -84,6 +86,7 @@ class IRCProtocol(asyncio.Protocol):
             self.writeln("PASS {}".format(password))
         self.writeln("USER {0} {1} {0} :{2}".format(user, mode, realname))
         self.writeln("NICK {}".format(nick))
+        signal("registration-complete").send(self)
         self.nickname = nick
 
     ## protocol abstractions
