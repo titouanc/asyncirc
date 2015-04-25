@@ -1,6 +1,7 @@
 from blinker import signal
 from asyncirc.irc import get_target, get_user, get_channel
 from asyncirc.parser import RFC1459Message
+import random
 
 def _pong(message):
     message.client.writeln("PONG {}".format(message.params[0]))
@@ -56,6 +57,12 @@ def _server_supports(message):
         else:
             message.client.server_supports[feature] = True
 
+def _nick_in_use(message):
+    message.client.old_nickname = message.client.nickname
+    s = "a{}".format("".join([random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)]))
+    message.client.nickname = s
+    message.client.writeln("NICK", s)
+
 def _redispatch_irc(message):
     signal("irc-{}".format(message.verb.lower())).send(message)
 
@@ -75,4 +82,4 @@ signal("irc-quit").connect(_redispatch_quit)
 signal("irc-kick").connect(_redispatch_kick)
 signal("irc-nick").connect(_redispatch_nick)
 signal("irc-005").connect(_server_supports)
-
+signal("irc-433").connect(_nick_in_use)

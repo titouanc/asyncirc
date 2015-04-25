@@ -44,6 +44,7 @@ class IRCProtocol(asyncio.Protocol):
         self.transport = transport
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
         self.buf = ""
+        self.old_nickname = None
         self.nickname = ""
         self.server_supports = collections.defaultdict(lambda *_: None)
         self.caps = set()
