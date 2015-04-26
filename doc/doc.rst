@@ -14,9 +14,8 @@ package name is ``asyncio-irc``.
 Signals
 -------
 Instead of using callback-style event handler registration, asyncirc uses
-*signals*. Signals are provided by the excellent
-`Blinker<https://pythonhosted.org/blinker/>`_ library. It would be advisable
-to read that page for more information on signals, but the tl;dr is::
+*signals*. Signals are provided by the excellent Blinker library. It would be 
+advisable to read that page for more information on signals, but the tl;dr is::
 
     # register a signal handler
     signal("signal-name").connect(signal_handler_function)
