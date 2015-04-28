@@ -87,13 +87,24 @@ classes. Here are those:
 ``user`` is usually an instance of the ``User`` class, which has some important
 attributes:
 
-    ``User.nick`` contains the nickname of the user
+* ``User.nick`` contains the nickname of the user
+* ``User.user`` contains the ident of the user
+* ``User.host`` contains the host of the user
+* ``User.hostmask`` contains the full hostmask of the user
 
-    ``User.user`` contains the ident of the user
+The ``IRCProtocol`` object
+======================
 
-    ``User.host`` contains the host of the user
+Your connection handle (above, named ``conn``) can do some useful stuff. Here's
+a list of some functions that you might find helpful when writing your code.
 
-    ``User.hostmask`` contains the full hostmask of the user
+* ``IRCProtocol.say(target, message)`` will send ``message`` to either a channel
+  or user ``target``.
+* ``IRCProtocol.join(channel_or_channels)`` will join either a single channel or
+  a list of channels, depending on what you give it.
+* ``IRCProtocol.part(channel_or_channels)`` works in a similar way to ``join``.
+* ``IRCProtocol.anything(arguments)`` will send the IRC command ANYTHING to the
+  server. It's basically a catch-all for any missing method.
 
 Events you can handle
 =====================

@@ -127,6 +127,19 @@ class IRCProtocol(asyncio.Protocol):
             self.writeln("PRIVMSG {} :{}".format(target_str, message[:400]))
             message = message[400:]
 
+    ## catch-all
+
+    def __getattr__(self, attr):
+        if attr in self.__dict__:
+            return self.__dict__[attr]
+
+        def _send_command(*args):
+            argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
+            self.writeln("{} {}".format(attr.upper(), argstr))
+
+        _send_command.__name__ == attr
+        return _send_command
+
 def get_user(hostmask):
     if "!" not in hostmask or "@" not in hostmask:
         return hostmask
