@@ -53,6 +53,8 @@ def _redispatch_kick(message):
 def _redispatch_nick(message):
     old_user = get_user(message.source)
     new_nick = message.params[0]
+    if old_user.nick == message.client.nickname:
+        message.client.nickname = new_nick
     signal("nick").send(message, user=old_user, new_nick=new_nick)
 
 def _server_supports(message):
