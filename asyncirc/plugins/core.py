@@ -73,8 +73,8 @@ def _parse_mode(message):
             arg = args.pop(0)
         else:
             arg = None
-        signal("{}mode".format(flag)).send(message, mode=mode, arg=arg)
-        signal("mode {}{}".format(flag, mode)).send(message, arg=arg)
+        signal("{}mode".format(flag)).send(message, mode=mode, arg=arg, user=user, channel=channel)
+        signal("mode {}{}".format(flag, mode)).send(message, arg=arg, user=user, channel=channel)
 
 def _server_supports(message):
     supports = message.params[1:]
