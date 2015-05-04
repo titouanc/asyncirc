@@ -57,6 +57,25 @@ def _redispatch_nick(message):
         message.client.nickname = new_nick
     signal("nick").send(message, user=old_user, new_nick=new_nick)
 
+def _parse_mode(message):
+    # :ChanServ!ChanServ@services. MODE ##fwilson +o fwilson
+    argument_modes = "".join(message.client.server_supports["CHANMODES"].split(",")[:-1])
+    setter = get_user(message.source)
+    channel = message.params[0]
+    modes = message.params[1]
+    args = message.params[2:]
+    flag = "+"
+    for mode in modes:
+        if mode in "+-":
+            flag = mode
+            continue
+        if mode in argument_modes:
+            arg = args.pop(0)
+        else:
+            arg = None
+        signal("{}mode".format(flag)).send(message, mode=mode, arg=arg)
+        signal("mode {}{}".format(flag, mode)).send(message, arg=arg)
+
 def _server_supports(message):
     supports = message.params[1:]
     for feature in supports:
@@ -107,5 +126,6 @@ signal("irc-part").connect(_redispatch_part)
 signal("irc-quit").connect(_redispatch_quit)
 signal("irc-kick").connect(_redispatch_kick)
 signal("irc-nick").connect(_redispatch_nick)
+signal("irc-mode").connect(_parse_mode)
 signal("irc-005").connect(_server_supports)
 signal("irc-433").connect(_nick_in_use)
