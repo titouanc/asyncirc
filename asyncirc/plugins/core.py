@@ -90,7 +90,7 @@ def _nick_in_use(message):
     message.client.old_nickname = message.client.nickname
     s = "a{}".format("".join([random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)]))
     message.client.nickname = s
-    message.client.writeln("NICK", s)
+    message.client.writeln("NICK {}".format(s))
 
 def _ping_servers():
     for client in ping_clients:
