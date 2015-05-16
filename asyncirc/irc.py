@@ -65,6 +65,7 @@ class IRCProtocol(asyncio.Protocol):
         self.old_nickname = None
         self.nickname = ""
         self.server_supports = collections.defaultdict(lambda *_: None)
+        self.queue = []
         self.caps = set()
 
         signal("connected").send(self)
@@ -87,6 +88,11 @@ class IRCProtocol(asyncio.Protocol):
 
     ## Core helper functions
 
+    def process_queue(self):
+        if self.queue:
+            self._writeln(self.queue.pop(0))
+        loop.call_later(5, self.process_queue)
+
     def on(self, event):
         def process(f):
             self.logger.debug("Registering function for event {}".format(event))
@@ -94,11 +100,14 @@ class IRCProtocol(asyncio.Protocol):
             return f
         return process
 
-    def writeln(self, line):
+    def _writeln(self, line):
         if not isinstance(line, bytes):
             line = line.encode()
         self.transport.get_extra_info('socket').send(line + b"\r\n")
         signal("irc-send").send(line.decode())
+
+    def writeln(self, line):
+        self.queue.append(line)
 
     def register(self, nick, user, realname, mode="+i", password=None):
         if password:
@@ -161,12 +170,10 @@ def connect(server, port=6697, use_ssl=True):
     return protocol.wrapper
 
 def reconnect(client_wrapper):
-    loop.stop()
-    connector = loop.create_connection(IRCProtocol, **client.server_info)
+    connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
     transport, protocol = loop.run_until_complete(connector)
     protocol.logger.critical("Reconnecting...")
     client_wrapper.protocol = protocol
-    loop.run_forever()
 
 signal("connection-lost").connect(reconnect)
 
