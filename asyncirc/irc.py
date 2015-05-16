@@ -66,6 +66,7 @@ class IRCProtocol(asyncio.Protocol):
         self.nickname = ""
         self.server_supports = collections.defaultdict(lambda *_: None)
         self.queue = []
+        self.queue_timer = 1.5
         self.caps = set()
 
         signal("connected").send(self)
@@ -92,7 +93,7 @@ class IRCProtocol(asyncio.Protocol):
     def process_queue(self):
         if self.queue:
             self._writeln(self.queue.pop(0))
-        loop.call_later(5, self.process_queue)
+        loop.call_later(self.queue_timer, self.process_queue)
 
     def on(self, event):
         def process(f):
