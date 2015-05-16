@@ -70,6 +70,7 @@ class IRCProtocol(asyncio.Protocol):
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
+        self.process_queue()
 
     def data_received(self, data):
         data = data.decode()
