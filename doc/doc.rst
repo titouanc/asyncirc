@@ -43,7 +43,7 @@ You'll need to register with the server::
 Once you're registered and connected, you'll want to join some channels::
 
     @conn.on("irc-001")
-    def autojoin_channels():
+    def autojoin_channels(message):
         conn.join(["#channel1", "#channel2"])
 
 Maybe you want to connect some event handlers::
