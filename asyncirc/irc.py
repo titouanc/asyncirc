@@ -10,6 +10,8 @@ from blinker import signal
 from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
 
+connections = {}
+
 plugins = []
 def plugin_registered_handler(plugin_name):
     plugins.append(plugin_name)
@@ -56,6 +58,7 @@ class IRCProtocol(asyncio.Protocol):
     ## Required by asyncio.Protocol
 
     def connection_made(self, transport):
+        self.work = True
         self.transport = transport
         self.wrapper = None
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
@@ -71,9 +74,11 @@ class IRCProtocol(asyncio.Protocol):
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
+        self._register()
         self.process_queue()
 
     def data_received(self, data):
+        if not self.work: return
         data = data.decode()
 
         self.buf += data
@@ -85,12 +90,14 @@ class IRCProtocol(asyncio.Protocol):
             signal("raw").send(self, text=line_received)
 
     def connection_lost(self, exc):
+        if not self.work: return
         self.logger.critical("Connection lost.")
         signal("connection-lost").send(self.wrapper)
 
     ## Core helper functions
 
     def process_queue(self):
+        if not self.work: return
         if self.queue:
             self._writeln(self.queue.pop(0))
         loop.call_later(self.queue_timer, self.process_queue)
@@ -112,12 +119,19 @@ class IRCProtocol(asyncio.Protocol):
         self.queue.append(line)
 
     def register(self, nick, user, realname, mode="+i", password=None):
-        if password:
-            self.writeln("PASS {}".format(password))
-        self.writeln("USER {0} {1} {0} :{2}".format(user, mode, realname))
-        self.writeln("NICK {}".format(nick))
+        self.nick = nick
+        self.user = user
+        self.realname = realname
+        self.mode = mode
+        self.password = password
+
+    def _register(self):
+        if self.password:
+            self.writeln("PASS {}".format(self.password))
+        self.writeln("USER {0} {1} {0} :{2}".format(self.user, self.mode, self.realname))
+        self.writeln("NICK {}".format(self.nick))
         signal("registration-complete").send(self)
-        self.nickname = nick
+        self.nickname = self.nick
 
     ## protocol abstractions
 
@@ -162,21 +176,18 @@ def get_channel(channel):
 def get_target(x):
     return x
 
-## public functional API
-
 def connect(server, port=6697, use_ssl=True):
     connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
+    protocol.net_id = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
+    connections[protocol.net_id] = protocol.wrapper
     return protocol.wrapper
 
-def reconnect(client_wrapper):
-    connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
-    transport, protocol = loop.run_until_complete(connector)
-    protocol.logger.critical("Reconnecting...")
-    client_wrapper.protocol = protocol
+def disconnected(client_wrapper):
+    logger.critical("Disconnected")
 
-signal("connection-lost").connect(reconnect)
+signal("connection-lost").connect(disconnected)
 
 import asyncirc.plugins.core
