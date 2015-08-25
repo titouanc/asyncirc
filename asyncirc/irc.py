@@ -115,14 +115,14 @@ class IRCProtocol(asyncio.Protocol):
         self.transport.get_extra_info('socket').send(line + b"\r\n")
         signal("irc-send").send(line.decode())
 
-    def writeln(self, line: str) -> IRCProtocol:
+    def writeln(self, line):
         """
         Queue a message for sending to the currently connected IRC server.
         """
         self.queue.append(line)
         return self
 
-    def register(self, nick: str, user: str, realname: str, mode: str="+i", password: str=None) -> IRCProtocol:
+    def register(self, nick, user, realname, mode="+i", password=None):
         """
         Queue registration with the server. This includes sending nickname,
         ident, realname, and password (if required by the server).
@@ -132,6 +132,7 @@ class IRCProtocol(asyncio.Protocol):
         self.realname = realname
         self.mode = mode
         self.password = password
+        return self
 
     def _register(self):
         if self.password:
@@ -143,7 +144,7 @@ class IRCProtocol(asyncio.Protocol):
 
     ## protocol abstractions
 
-    def join(self, channels: list) -> IRCProtocol:
+    def join(self, channels):
         """
         Join channels. Pass a list to join all the channels, or a string to
         join a single channel. If registration with the server is not yet
