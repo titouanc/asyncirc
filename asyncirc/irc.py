@@ -74,7 +74,6 @@ class IRCProtocol(asyncio.Protocol):
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
-        self._register()
         self.process_queue()
 
     def data_received(self, data):
@@ -112,6 +111,7 @@ class IRCProtocol(asyncio.Protocol):
     def _writeln(self, line):
         if not isinstance(line, bytes):
             line = line.encode()
+        self.logger.debug(line)
         self.transport.get_extra_info('socket').send(line + b"\r\n")
         signal("irc-send").send(line.decode())
 
@@ -183,7 +183,7 @@ class IRCProtocol(asyncio.Protocol):
         if attr in self.__dict__:
             return self.__dict__[attr]
 
-        def _send_command(*args):
+        def _send_command(self, *args):
             argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
             self.writeln("{} {}".format(attr.upper(), argstr))
 
@@ -206,12 +206,24 @@ def connect(server, port=6697, use_ssl=True):
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
-    protocol.net_id = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
-    connections[protocol.net_id] = protocol.wrapper
+    protocol.netid = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
+    connections[protocol.netid] = protocol.wrapper
     return protocol.wrapper
 
 def disconnected(client_wrapper):
-    logger.critical("Disconnected")
+    client_wrapper.protocol.work = False
+    client_wrapper.logger.critical("Disconnected from {}. Attempting to reconnect...".format(client_wrapper.netid))
+    connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
+    def reconnected(f):
+        client_wrapper.logger.critical("Reconnected! {}".format(client_wrapper.netid))
+        _, protocol = f.result()
+        protocol.register(client_wrapper.nick, client_wrapper.user, client_wrapper.realname, client_wrapper.mode, client_wrapper.password)
+        protocol.channels_to_join = client_wrapper.channels_to_join
+        protocol.server_info = client_wrapper.server_info
+        protocol.netid = client_wrapper.netid
+        protocol.wrapper = client_wrapper
+        client_wrapper.protocol = protocol
+    asyncio.async(connector).add_done_callback(reconnected)
 
 signal("connection-lost").connect(disconnected)
 

@@ -111,18 +111,22 @@ def _redispatch_raw(client, text):
     message.client = client
     signal("irc").send(message)
 
+def _register_client(client):
+    asyncio.get_event_loop().call_later(1, client._register)
+
 def _queue_ping(client):
     ping_clients.append(client)
     _ping_servers()
 
 def _connection_registered(message):
     message.client.registration_complete = True
-    while message.client.channels_to_join:
-        message.client.join(message.client.channels_to_join.pop())
+    _queue_ping(message.client)
+    for channel in message.client.channels_to_join:
+        message.client.join(channel)
 
 signal("raw").connect(_redispatch_raw)
 signal("irc").connect(_redispatch_irc)
-signal("connected").connect(_queue_ping)
+signal("connected").connect(_register_client)
 signal("irc-ping").connect(_pong)
 signal("irc-pong").connect(_catch_pong)
 signal("irc-privmsg").connect(_redispatch_privmsg)
