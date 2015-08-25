@@ -25,6 +25,7 @@ def registration_complete(client):
 def handle_client_create(client):
     capabilities_available[client.netid] = set()
     registration_state[client.netid] = set()
+    capabilities_pending[client.netid] = set()
     client.writeln("CAP LS")
 
 def check_all_caps_done(client):
