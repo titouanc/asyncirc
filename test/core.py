@@ -1,7 +1,7 @@
 from asynctest import test, TestManager
 from asyncirc.plugins import core
 from blinker import signal
-from mocks import Client
+from _mocks import Client
 
 def receive_pong(line):
     if line != "PONG irc.example.com":

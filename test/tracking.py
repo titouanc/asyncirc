@@ -1,7 +1,7 @@
 from asynctest import test, Test, TestManager
 from asyncirc.plugins import tracking
 from blinker import signal
-from mocks import Client
+from _mocks import Client
 
 client = Client()
 client.netid = "mock for testing"
