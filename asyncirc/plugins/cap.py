@@ -3,45 +3,53 @@ from blinker import signal
 import logging
 logger = logging.getLogger("asyncirc.plugins.cap")
 
-capabilities_requested = set()
-capabilities_available = set()
-capabilities_pending = []
+capabilities_requested = {}
+capabilities_available = {}
+capabilities_pending = {}
+registration_state = {}
 
-registration_state = set()
-
-def request_capability(cap):
-    capabilities_requested.add(cap)
+def request_capability(netid, cap):
+    if netid not in capabilities_requested:
+        capabilities_requested[netid] = set()
+    capabilities_requested[netid].add(cap)
 
 def request_capabilities(client, caps):
-    if len(registration_state) >= 2:
+    if len(registration_state[client.netid]) >= 2:
         client.writeln("CAP REQ :{}".format(" ".join(list(caps))))
         client.caps |= caps
 
 def registration_complete(client):
-    registration_state.add("registered")
-    request_capabilities(client, capabilities_available & capabilities_requested)
+    registration_state[client.netid].add("registered")
+    request_capabilities(client, capabilities_available[client.netid] & capabilities_requested[client.netid])
 
 def handle_client_create(client):
+    capabilities_available[client.netid] = set()
+    registration_state[client.netid] = set()
     client.writeln("CAP LS")
 
 def check_all_caps_done(client):
-    if not capabilities_pending:
+    if client.netid not in capabilities_pending or not capabilities_pending[client.netid]:
         client.writeln("CAP END")
 
 def cap_done(client, cap):
-    capabilities_pending.remove(cap)
+    capabilities_pending[client.netid].remove(cap)
     check_all_caps_done(client)
 
-def cap_wait(cap):
-    capabilities_requested.add(cap)
-    capabilities_pending.append(cap)
+def cap_wait(netid, cap):
+    if netid not in capabilities_requested:
+        capabilities_requested[netid] = set()
+    capabilities_requested[netid].add(cap)
+
+    if netid not in capabilities_pending:
+        capabilities_pending[netid] = set()
+    capabilities_pending[netid].add(cap)
 
 def handle_irc_cap(message):
     if message.params[1] == "LS":
-        capabilities_available.update(set(message.params[2].split()))
-        logger.debug("Capabilities provided by server are {}".format(capabilities_available))
-        registration_state.add("caps-known")
-        request_capabilities(message.client, capabilities_available & capabilities_requested)
+        capabilities_available[message.client.netid].update(set(message.params[2].split()))
+        logger.debug("Capabilities provided by server are {}".format(capabilities_available[message.client.netid]))
+        registration_state[client.netid].add("caps-known")
+        request_capabilities(message.client, capabilities_available[message.client.netid] & capabilities_requested[message.client.netid])
 
     if message.params[1] == "ACK":
         logger.debug("ACK received from server, ending capability negotiation. {}".format(message.client.caps))

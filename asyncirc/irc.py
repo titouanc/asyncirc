@@ -10,9 +10,12 @@ from blinker import signal
 from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
 
+connections = {}
+
 plugins = []
 def plugin_registered_handler(plugin_name):
     plugins.append(plugin_name)
+
 signal("plugin-registered").connect(plugin_registered_handler)
 
 def load_plugins(*plugins):
@@ -52,10 +55,8 @@ class IRCProtocolWrapper:
             setattr(self.protocol, attr, val)
 
 class IRCProtocol(asyncio.Protocol):
-
-    ## Required by asyncio.Protocol
-
     def connection_made(self, transport):
+        self.work = True
         self.transport = transport
         self.wrapper = None
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
@@ -68,12 +69,16 @@ class IRCProtocol(asyncio.Protocol):
         self.queue = []
         self.queue_timer = 1.5
         self.caps = set()
+        self.registration_complete = False
+        self.channels_to_join = []
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
+        self._register()
         self.process_queue()
 
     def data_received(self, data):
+        if not self.work: return
         data = data.decode()
 
         self.buf += data
@@ -85,12 +90,14 @@ class IRCProtocol(asyncio.Protocol):
             signal("raw").send(self, text=line_received)
 
     def connection_lost(self, exc):
+        if not self.work: return
         self.logger.critical("Connection lost.")
         signal("connection-lost").send(self.wrapper)
 
     ## Core helper functions
 
     def process_queue(self):
+        if not self.work: return
         if self.queue:
             self._writeln(self.queue.pop(0))
         loop.call_later(self.queue_timer, self.process_queue)
@@ -109,25 +116,57 @@ class IRCProtocol(asyncio.Protocol):
         signal("irc-send").send(line.decode())
 
     def writeln(self, line):
+        """
+        Queue a message for sending to the currently connected IRC server.
+        """
         self.queue.append(line)
+        return self
 
     def register(self, nick, user, realname, mode="+i", password=None):
-        if password:
-            self.writeln("PASS {}".format(password))
-        self.writeln("USER {0} {1} {0} :{2}".format(user, mode, realname))
-        self.writeln("NICK {}".format(nick))
+        """
+        Queue registration with the server. This includes sending nickname,
+        ident, realname, and password (if required by the server).
+        """
+        self.nick = nick
+        self.user = user
+        self.realname = realname
+        self.mode = mode
+        self.password = password
+        return self
+
+    def _register(self):
+        if self.password:
+            self.writeln("PASS {}".format(self.password))
+        self.writeln("USER {0} {1} {0} :{2}".format(self.user, self.mode, self.realname))
+        self.writeln("NICK {}".format(self.nick))
         signal("registration-complete").send(self)
-        self.nickname = nick
+        self.nickname = self.nick
 
     ## protocol abstractions
 
     def join(self, channels):
+        """
+        Join channels. Pass a list to join all the channels, or a string to
+        join a single channel. If registration with the server is not yet
+        complete, this will queue channels to join when registration is done.
+        """
         if not isinstance(channels, list):
             channels = [channels]
         channels_str = ",".join(channels)
-        self.writeln("JOIN {}".format(channels_str))
+
+        if not self.registration_complete:
+            self.channels_to_join.append(channels_str)
+        else:
+            self.writeln("JOIN {}".format(channels_str))
+
+        return self
 
     def part(self, channels):
+        """
+        Leave channels. Pass a list to leave all the channels, or a string to
+        leave a single channel. If registration with the server is not yet
+        complete, you're dumb.
+        """
         if not isinstance(channels, list):
             channels = [channels]
         channels_str = ",".join(channels)
@@ -162,21 +201,18 @@ def get_channel(channel):
 def get_target(x):
     return x
 
-## public functional API
-
 def connect(server, port=6697, use_ssl=True):
     connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
+    protocol.net_id = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
+    connections[protocol.net_id] = protocol.wrapper
     return protocol.wrapper
 
-def reconnect(client_wrapper):
-    connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
-    transport, protocol = loop.run_until_complete(connector)
-    protocol.logger.critical("Reconnecting...")
-    client_wrapper.protocol = protocol
+def disconnected(client_wrapper):
+    logger.critical("Disconnected")
 
-signal("connection-lost").connect(reconnect)
+signal("connection-lost").connect(disconnected)
 
 import asyncirc.plugins.core

@@ -1,6 +1,7 @@
 import asyncirc
 import asyncirc.irc
 from blinker import signal
+from parser import RFC1459Message
 
 class Registry:
     def __init__(self):
@@ -9,14 +10,21 @@ class Registry:
         self.users = {}
         self.channels = {}
 
-registry = Registry()
+registries = {}
+
+def create_registry(client):
+    registries[client.netid] = Registry()
+    client.tracking_registry = registries[client.netid]
+
+signal("connected").connect(create_registry)
 
 class User:
-    def __init__(self, nick, user, host):
+    def __init__(self, nick, user, host, netid=None):
         self.nick = nick
         self.user = user
         self.host = host
         self.account = None
+        self.netid = netid
         self.previous_nicks = []
 
     def _get_channels(self):
@@ -28,10 +36,11 @@ class User:
     channels = property(_get_channels)
 
 class Channel:
-    def __init__(self, channel):
+    def __init__(self, channel, netid=None):
         self.channel = channel
         self.available = False
         self.mode = ""
+        self.netid = netid
         self.state = set()
 
     def _get_users(self):
@@ -42,15 +51,6 @@ class Channel:
 
     users = property(_get_users)
 
-class Target:
-    def __init__(self, target):
-        self.target = target
-
-    def trackable(self):
-        if self.target[0] == '#':
-            return get_channel(self.target)
-        return get_user(self.target)
-
 ## utility functions
 
 def parse_hostmask(hostmask):
@@ -60,10 +60,19 @@ def parse_hostmask(hostmask):
         return nick, user, host
     return hostmask, None, None
 
-## things we actually really don't want to redefine
+def get_user(netid_or_message, hostmask=None):
+    if isinstance(netid_or_message, RFC1459Message):
+        netid = netid_or_message.client.netid
+        if hostmask is None:
+            hostmask = netid_or_message.source
+    else:
+        netid = netid
 
-def get_user(x):
-    nick, user, host = parse_hostmask(x)
+    if hostmask is None:
+        raise Exception("hostmask passed as none, but no message was passed")
+
+    registry = registries[message.client.netid]
+    nick, user, host = parse_hostmask(message.user.hostmask)
     if nick in registry.users:
         if user is not None and host is not None:
             registry.users[nick].user = user
@@ -71,26 +80,29 @@ def get_user(x):
         return registry.users[nick]
 
     if user is not None and host is not None:
-        registry.users[nick] = User(nick, user, host)
+        registry.users[nick] = User(nick, user, host, netid)
         return registry.users[nick]
 
     if "." in nick: # it's probably a server
-        return User(nick, nick, nick)
+        return User(nick, nick, nick, netid)
 
     # we don't know about this user yet, so return a dummy.
     # this will be updated when get_user is called again with the same nick
     # and a full hostmask
     # FIXME it would probably be a good idea to /whois here
-    registry.users[nick] = User(nick, None, None)
+    registry.users[nick] = User(nick, None, None, netid)
     return registry.users[nick]
 
-def get_channel(x):
-    if x not in registry.channels:
-        registry.channels[x] = Channel(x)
-    return registry.channels[x]
+def get_channel(netid_or_message, x):
+    if isinstance(netid_or_message, RFC1459Message):
+        netid = netid_or_message.client.netid
+    else:
+        netid = netid
 
-def get_target(x):
-    return Target(x)
+    registry = registries[netid]
+    if x not in registry.channels:
+        registry.channels[x] = Channel(x, netid)
+    return registry.channels[x]
 
 ## signal definitions
 
@@ -114,8 +126,8 @@ def sync_channel(client, channel):
     client.writeln("MODE {}".format(channel))
 
 sync_complete_set = {"mode", "who"}
-def check_sync_done(channel):
-    if get_channel(channel).state == sync_complete_set:
+def check_sync_done(message, channel):
+    if get_channel(message, channel).state == sync_complete_set:
         signal("sync-done").send(channel)
 
 ## event handlers
@@ -123,36 +135,36 @@ def check_sync_done(channel):
 @extwho_response.connect
 def handle_extwho_response(message):
     mynick, channel, ident, host, nick, account = message.params
-    user = get_user("{}!{}@{}".format(nick, ident, host))
+    user = get_user(message, "{}!{}@{}".format(nick, ident, host))
     user.account = account if account != "0" else None
     handle_join(message, user, channel, real=False)
 
 @who_response.connect
 def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
-    user = get_user("{}!{}@{}".format(nick, ident, host))
+    user = get_user(message, "{}!{}@{}".format(nick, ident, host))
     handle_join(message, user, channel, real=False)
 
 @channel_mode.connect
 def handle_received_mode(message):
     channel, mode = message.params[1], message.params[2]
-    channel_obj = get_channel(channel)
+    channel_obj = get_channel(message, channel)
     channel_obj.mode = mode
     channel_obj.state = channel_obj.state | {"mode"}
-    check_sync_done(channel)
+    check_sync_done(message, channel)
 
 @who_done.connect
 def handle_who_done(message):
     channel = message.params[1]
-    channel_obj = get_channel(channel)
+    channel_obj = get_channel(message, channel)
     channel_obj.state = channel_obj.state | {"who"}
-    check_sync_done(channel)
+    check_sync_done(message, channel)
 
 @join.connect
 def handle_join(message, user, channel, real=True):
     if user.nick == message.client.nickname and real:
         sync_channel(message.client, channel)
-        get_channel(channel).available = True
+        get_channel(message, channel).available = True
     registry.mappings.add((user.nick, channel))
 
 @extjoin.connect
@@ -160,23 +172,23 @@ def handle_extjoin(message):
     if "extended-join" not in message.client.caps:
         return
     account = message.params[1]
-    get_user(message.source).account = account if account != "*" else None
+    get_user(message).account = account if account != "*" else None
 
 @account.connect
 def account_notify(message):
     account = message.params[0]
-    get_user(message.source).account = account if account != "*" else None
+    get_user(message).account = account if account != "*" else None
 
 @part.connect
 def handle_part(message, user, channel, reason):
-    user = get_user(user.nick)
+    user = get_user(message, user.nick)
     if user == message.client.nickname:
-        get_channel(channel).available = False
+        get_channel(message, channel).available = False
     registry.mappings.discard((user.nick, channel))
 
 @quit.connect
 def handle_quit(message, user, reason):
-    user = get_user(user.nick)
+    user = get_user(message, user.nick)
     del registry.users[user.nick]
     for channel in set(user.channels):
         registry.mappings.discard((user.nick, channel))
@@ -187,7 +199,7 @@ def handle_kick(message, kicker, kickee, channel, reason):
 
 @nick.connect
 def handle_nick(message, user, new_nick):
-    user = get_user(user.hostmask)
+    user = get_user(message)
     old_nick = user.nick
     user.previous_nicks.append(old_nick)
     user.nick = new_nick
