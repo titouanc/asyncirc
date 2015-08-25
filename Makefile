@@ -2,7 +2,7 @@ localtest:
 	cd test; python run_all.py
 
 coverage:
-	cd test; coverage --source asyncirc run run_all.py; coverage html
+	cd test; coverage run --source asyncirc run_all.py; coverage html
 	cd test/htmlcov; google-chrome-stable index.html
 
 clean:
