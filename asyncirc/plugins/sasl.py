@@ -5,22 +5,25 @@ import logging
 logger = logging.getLogger("asyncirc.plugins.sasl")
 
 import asyncirc.plugins.cap
-asyncirc.plugins.cap.cap_wait("sasl")
 
-pending_authentications = []
+pending_authentications = {}
 
 class AuthenticationFailed(Exception): pass
 
-def auth(username, password):
-    pending_authentications.append([username, password])
+def auth(client, username, password):
+    asyncirc.plugins.cap.cap_wait(client.netid, "sasl")
+    if client.netid not in pending_authentications:
+        pending_authentications[client.netid] = []
+    pending_authentications[client.netid].append([username, password])
 
 def caps_acknowledged(client):
-    client.writeln("AUTHENTICATE PLAIN")
+    if client.netid in pending_authentications:
+        client.writeln("AUTHENTICATE PLAIN")
 
 def handle_authenticate(message):
     if message.params[0] == "+":
         logger.debug("Authentication request acknowledged, sending username/password")
-        authinfo = pending_authentications.pop()
+        authinfo = pending_authentications[message.client.netid].pop()
         authdata = base64.b64encode("{0}\x00{0}\x00{1}".format(*authinfo).encode())
         message.client.writeln("AUTHENTICATE {}".format(authdata.decode()))
 
