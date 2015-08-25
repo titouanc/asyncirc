@@ -1,7 +1,7 @@
 import asyncirc
 import asyncirc.irc
 from blinker import signal
-from parser import RFC1459Message
+from asyncirc.parser import RFC1459Message
 
 class Registry:
     def __init__(self):
@@ -28,7 +28,7 @@ class User:
         self.previous_nicks = []
 
     def _get_channels(self):
-        return map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registry.mappings))
+        return map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registries[self.netid].mappings))
 
     def __repr__(self):
         return "User {}!{}@{}".format(self.nick, self.user, self.host)
@@ -44,7 +44,7 @@ class Channel:
         self.state = set()
 
     def _get_users(self):
-        return map(lambda x: x[0], filter(lambda x: x[1] == self.channel, registry.mappings))
+        return map(lambda x: x[0], filter(lambda x: x[1] == self.channel, registries[self.netid].mappings))
 
     def __repr__(self):
         return "Channel {}".format(self.channel)
@@ -71,7 +71,7 @@ def get_user(netid_or_message, hostmask=None):
     if hostmask is None:
         raise Exception("hostmask passed as none, but no message was passed")
 
-    registry = registries[message.client.netid]
+    registry = registries[netid]
     nick, user, host = parse_hostmask(hostmask)
     if nick in registry.users:
         if user is not None and host is not None:
@@ -165,7 +165,7 @@ def handle_join(message, user, channel, real=True):
     if user.nick == message.client.nickname and real:
         sync_channel(message.client, channel)
         get_channel(message, channel).available = True
-    registry.mappings.add((user.nick, channel))
+    message.client.tracking_registry.mappings.add((user.nick, channel))
 
 @extjoin.connect
 def handle_extjoin(message):
@@ -184,18 +184,18 @@ def handle_part(message, user, channel, reason):
     user = get_user(message, user.nick)
     if user == message.client.nickname:
         get_channel(message, channel).available = False
-    registry.mappings.discard((user.nick, channel))
+    message.client.tracking_registry.mappings.discard((user.nick, channel))
 
 @quit.connect
 def handle_quit(message, user, reason):
     user = get_user(message, user.nick)
-    del registry.users[user.nick]
+    del message.client.tracking_registry.users[user.nick]
     for channel in set(user.channels):
-        registry.mappings.discard((user.nick, channel))
+        message.client.tracking_registry.mappings.discard((user.nick, channel))
 
 @kick.connect
 def handle_kick(message, kicker, kickee, channel, reason):
-    registry.mappings.discard((kickee, channel))
+    message.client.tracking_registry.mappings.discard((kickee, channel))
 
 @nick.connect
 def handle_nick(message, user, new_nick):
@@ -203,7 +203,7 @@ def handle_nick(message, user, new_nick):
     old_nick = user.nick
     user.previous_nicks.append(old_nick)
     user.nick = new_nick
-    del registry.users[old_nick]
-    registry.users[new_nick] = user
+    del message.client.tracking_registry.users[old_nick]
+    message.client.tracking_registry.users[new_nick] = user
 
 signal("plugin-registered").send("asyncirc.plugins.tracking")
