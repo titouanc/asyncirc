@@ -1,3 +1,5 @@
+# asyncirc [![Build Status](https://travis-ci.org/watchtower/asyncirc.svg?branch=master)](https://travis-ci.org/watchtower/asyncirc)
+
 **Asyncirc** is an asyncio-based IRC framework for Python.
 
 ## Installation
