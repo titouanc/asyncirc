@@ -67,7 +67,7 @@ def get_user(netid_or_message, hostmask=None):
         if hostmask is None:
             hostmask = netid_or_message.source
     else:
-        netid = netid
+        netid = netid_or_message
 
     if hostmask is None:
         raise Exception("hostmask passed as none, but no message was passed")
@@ -144,7 +144,7 @@ def handle_topic_set(message):
 def handle_topic_changed(message):
     channel, topic = message.params
     get_channel(message, channel).topic = topic
-    signal("topic-changed").send(message, user=get_user(message.source), channel=channel, topic=topic)
+    signal("topic-changed").send(message, user=get_user(message), channel=channel, topic=topic)
 
 @extwho_response.connect
 def handle_extwho_response(message):
