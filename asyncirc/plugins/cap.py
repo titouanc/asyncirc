@@ -42,7 +42,7 @@ def cap_wait(netid, cap):
 
     if netid not in capabilities_pending:
         capabilities_pending[netid] = set()
-    capabilities_pending[netid].append(cap)
+    capabilities_pending[netid].add(cap)
 
 def handle_irc_cap(message):
     if message.params[1] == "LS":
