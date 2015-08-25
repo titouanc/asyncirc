@@ -40,6 +40,7 @@ class Channel:
         self.channel = channel
         self.available = False
         self.mode = ""
+        self.topic = ""
         self.netid = netid
         self.state = set()
 
@@ -113,6 +114,8 @@ part = signal("part")
 quit = signal("quit")
 kick = signal("kick")
 nick = signal("nick")
+topic = signal("irc-332")
+topic_changed = signal("irc-topic")
 extwho_response = signal("irc-354")
 who_response = signal("irc-352")
 who_done = signal("irc-315")
@@ -131,6 +134,17 @@ def check_sync_done(message, channel):
         signal("sync-done").send(channel)
 
 ## event handlers
+
+@topic.connect
+def handle_topic_set(message):
+    mynick, channel, topic = message.params
+    get_channel(message, channel).topic = topic
+
+@topic_changed.connect
+def handle_topic_changed(message):
+    channel, topic = message.params
+    get_channel(message, channel).topic = topic
+    signal("topic-changed").send(message, user=get_user(message.source), channel=channel, topic=topic)
 
 @extwho_response.connect
 def handle_extwho_response(message):
@@ -162,6 +176,8 @@ def handle_who_done(message):
 
 @join.connect
 def handle_join(message, user, channel, real=True):
+    get_channel(message, channel)
+
     if user.nick == message.client.nickname and real:
         sync_channel(message.client, channel)
         get_channel(message, channel).available = True
@@ -191,7 +207,7 @@ def handle_quit(message, user, reason):
     user = get_user(message, user.nick)
     del message.client.tracking_registry.users[user.nick]
     for channel in set(user.channels):
-        message.client.tracking_registry.mappings.discard((user.nick, channel))
+        message.client.tracking_registry.mappings.remove((user.nick, channel))
 
 @kick.connect
 def handle_kick(message, kicker, kickee, channel, reason):

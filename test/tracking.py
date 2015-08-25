@@ -65,10 +65,26 @@ def test_kick():
 def check_kick_removes_user_from_channel(_):
     test_kick.succeed_if(user_not_in_example_channel())
 
+@test("should set topics for channels on 332 numerics")
+def test_topic_332():
+    signal("raw").send(client, text=":irc.example.com 332 botnick #example :the topic")
+
+@test_topic_332.done.connect
+def check_topic_332(_):
+    test_topic_332.succeed_if(client.tracking_registry.channels["#example"].topic == "the topic")
+
+@test("should set topics for channels when they are changed")
+def test_topic_changed():
+    signal("raw").send(client, text=":example!example@example.com TOPIC #example :the new topic")
+
+@test_topic_changed.done.connect
+def check_topic_changed(_):
+    test_topic_changed.succeed_if(client.tracking_registry.channels["#example"].topic == "the new topic")
+
 manager = TestManager([
     test_add_objects_to_database, test_account_recording_on_extjoin, test_host_recording,
     test_channel_membership_join_tracking, test_channel_membership_part_tracking, test_quit,
-    test_kick, test_user_return_after_quit
+    test_kick, test_user_return_after_quit, test_topic_332, test_topic_changed
 ])
 
 if __name__ == '__main__':
