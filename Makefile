@@ -1,3 +1,6 @@
+localtest:
+	cd test; python run_all.py
+
 install:
 	python setup.py install
 
