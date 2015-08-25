@@ -98,7 +98,7 @@ def get_channel(netid_or_message, x):
     if isinstance(netid_or_message, RFC1459Message):
         netid = netid_or_message.client.netid
     else:
-        netid = netid
+        netid = netid_or_message
 
     registry = registries[netid]
     if x not in registry.channels:
