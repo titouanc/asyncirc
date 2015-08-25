@@ -46,6 +46,12 @@ Once you're registered and connected, you'll want to join some channels::
     def autojoin_channels(message):
         conn.join(["#channel1", "#channel2"])
 
+If you'd rather not go through all that, you can also use the fluent interface::
+
+    conn = irc.connect("chat.freenode.net", 6697, use_ssl=True) \
+              .register("nick", "ident", "realname") \
+              .join(["#channel1", "#channel2"])
+
 Maybe you want to connect some event handlers::
 
     @conn.on("join")
