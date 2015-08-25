@@ -115,6 +115,11 @@ def _queue_ping(client):
     ping_clients.append(client)
     _ping_servers()
 
+def _connection_registered(message):
+    message.client.registration_complete = True
+    while message.client.channels_to_join:
+        message.client.join(message.client.channels_to_join.pop())
+
 signal("raw").connect(_redispatch_raw)
 signal("irc").connect(_redispatch_irc)
 signal("connected").connect(_queue_ping)
@@ -130,3 +135,4 @@ signal("irc-nick").connect(_redispatch_nick)
 signal("irc-mode").connect(_parse_mode)
 signal("irc-005").connect(_server_supports)
 signal("irc-433").connect(_nick_in_use)
+signal("irc-001").connect(_connection_registered)

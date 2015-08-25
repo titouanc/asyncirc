@@ -15,6 +15,7 @@ connections = {}
 plugins = []
 def plugin_registered_handler(plugin_name):
     plugins.append(plugin_name)
+
 signal("plugin-registered").connect(plugin_registered_handler)
 
 def load_plugins(*plugins):
@@ -54,9 +55,6 @@ class IRCProtocolWrapper:
             setattr(self.protocol, attr, val)
 
 class IRCProtocol(asyncio.Protocol):
-
-    ## Required by asyncio.Protocol
-
     def connection_made(self, transport):
         self.work = True
         self.transport = transport
@@ -71,6 +69,8 @@ class IRCProtocol(asyncio.Protocol):
         self.queue = []
         self.queue_timer = 1.5
         self.caps = set()
+        self.registration_complete = False
+        self.channels_to_join = []
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
@@ -115,10 +115,18 @@ class IRCProtocol(asyncio.Protocol):
         self.transport.get_extra_info('socket').send(line + b"\r\n")
         signal("irc-send").send(line.decode())
 
-    def writeln(self, line):
+    def writeln(self, line: str) -> IRCProtocol:
+        """
+        Queue a message for sending to the currently connected IRC server.
+        """
         self.queue.append(line)
+        return self
 
-    def register(self, nick, user, realname, mode="+i", password=None):
+    def register(self, nick: str, user: str, realname: str, mode: str="+i", password: str=None) -> IRCProtocol:
+        """
+        Queue registration with the server. This includes sending nickname,
+        ident, realname, and password (if required by the server).
+        """
         self.nick = nick
         self.user = user
         self.realname = realname
@@ -135,13 +143,29 @@ class IRCProtocol(asyncio.Protocol):
 
     ## protocol abstractions
 
-    def join(self, channels):
+    def join(self, channels: list) -> IRCProtocol:
+        """
+        Join channels. Pass a list to join all the channels, or a string to
+        join a single channel. If registration with the server is not yet
+        complete, this will queue channels to join when registration is done.
+        """
         if not isinstance(channels, list):
             channels = [channels]
         channels_str = ",".join(channels)
-        self.writeln("JOIN {}".format(channels_str))
+
+        if not self.registration_complete:
+            self.channels_to_join.append(channels_str)
+        else:
+            self.writeln("JOIN {}".format(channels_str))
+
+        return self
 
     def part(self, channels):
+        """
+        Leave channels. Pass a list to leave all the channels, or a string to
+        leave a single channel. If registration with the server is not yet
+        complete, you're dumb.
+        """
         if not isinstance(channels, list):
             channels = [channels]
         channels_str = ",".join(channels)
