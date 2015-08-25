@@ -72,7 +72,7 @@ def get_user(netid_or_message, hostmask=None):
         raise Exception("hostmask passed as none, but no message was passed")
 
     registry = registries[message.client.netid]
-    nick, user, host = parse_hostmask(message.user.hostmask)
+    nick, user, host = parse_hostmask(hostmask)
     if nick in registry.users:
         if user is not None and host is not None:
             registry.users[nick].user = user
