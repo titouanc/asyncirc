@@ -19,6 +19,9 @@ def quit_example_user():
 def kick_example_user():
     signal("raw").send(client, text=":someop!~someop@example.org KICK #example example :Example kick reason")
 
+def user_not_in_example_channel():
+    return "#example" not in client.tracking_registry.users["example"].channels
+
 @test("should add users to the tracking database on channel joins")
 def test_add_objects_to_database():
     join_example_user()
@@ -40,7 +43,7 @@ def test_channel_membership_part_tracking():
 
 @test_channel_membership_part_tracking.done.connect
 def check_membership(_):
-    test_channel_membership_part_tracking.succeed_if("#example" not in client.tracking_registry.users["example"].channels)
+    test_channel_membership_part_tracking.succeed_if(user_not_in_example_channel())
 
 @test("should remove users from the registry on quit")
 def test_quit():
@@ -60,7 +63,7 @@ def test_kick():
 
 @test_kick.done.connect
 def check_kick_removes_user_from_channel(_):
-    test_kick.succeed_if("#example" not in client.tracking_registry.users["example"].channels)
+    test_kick.succeed_if(user_not_in_example_channel())
 
 manager = TestManager([
     test_add_objects_to_database, test_account_recording_on_extjoin, test_host_recording,
