@@ -4,43 +4,25 @@ from blinker import signal
 from _mocks import Client
 
 def receive_pong(line):
-    if line != "PONG irc.example.com":
-        test_ping.failure()
-    else:
-        test_ping.success()
+    test_ping.succeed_if(line == "PONG irc.example.com")
 
 def check_example_user(u):
     return u.nick == "example" and u.user == "example" and u.host == "example.com"
 
 def receive_public_message_signal(message, user, target, text):
-    if check_example_user(user) and target == "#example" and text == "example public message":
-        test_public_message_dispatch.success()
-    else:
-        test_public_message_dispatch.failure()
+    test_public_message_dispatch.succeed_if(check_example_user(user) and target == "#example" and text == "example public message")
 
 def receive_private_message_signal(message, user, target, text):
-    if check_example_user(user) and text == "example private message":
-        test_private_message_dispatch.success()
-    else:
-        test_private_message_dispatch.failure()
+    test_private_message_dispatch.succeed_if(check_example_user(user) and text == "example private message")
 
 def receive_public_notice_signal(message, user, target, text):
-    if check_example_user(user) and target == "#example" and text == "example public notice":
-        test_public_notice_dispatch.success()
-    else:
-        test_public_notice_dispatch.failure()
+    test_public_notice_dispatch.succeed_if(check_example_user(user) and target == "#example" and text == "example public notice")
 
 def receive_private_notice_signal(message, user, target, text):
-    if check_example_user(user) and text == "example private notice":
-        test_private_notice_dispatch.success()
-    else:
-        test_private_notice_dispatch.failure()
+    test_private_notice_dispatch.succeed_if(check_example_user(user) and text == "example private notice")
 
 def receive_join_signal(message, user, channel):
-    if check_example_user(user) and channel == "#example":
-        test_join_dispatch.success()
-    else:
-        test_join_dispatch.failure()
+    test_join_dispatch.succeed_if(check_example_user(user) and channel == "#example")
 
 def receive_part_signal(message, user, channel, reason):
     if check_example_user(user) and channel == "#example" and reason == "example part reason":
@@ -53,23 +35,13 @@ def receive_part_signal(message, user, channel, reason):
         test_part_dispatch_no_reason.failure()
 
 def receive_quit_signal(message, user, reason):
-    if check_example_user(user) and reason == "Quit (Example reason)":
-        test_quit_dispatch.success()
-    else:
-        test_quit_dispatch.failure()
+    test_quit_dispatch.succeed_if(check_example_user(user) and reason == "Quit (Example reason)")
 
 def receive_kick_signal(message, kicker, kickee, channel, reason):
-    if check_example_user(kicker) and kickee == "user" and reason == "kicked" \
-            and channel == "#channel":
-        test_kick_dispatch.success()
-    else:
-        test_kick_dispatch.failure()
+    test_kick_dispatch.succeed_if(check_example_user(kicker) and kickee == "user" and reason == "kicked" and channel == "#channel")
 
 def receive_nick_signal(message, user, new_nick):
-    if check_example_user(user) and new_nick == "examp[le]":
-        test_nick_dispatch.success()
-    else:
-        test_nick_dispatch.failure()
+    test_nick_dispatch.succeed_if(check_example_user(user) and new_nick == "examp[le]")
 
 signal("public-message").connect(receive_public_message_signal)
 signal("private-message").connect(receive_private_message_signal)
@@ -131,10 +103,7 @@ def test_nick_dispatch():
 @test("should recognize ISUPPORT messages and update the server_supports dict")
 def test_isupport():
     signal("raw").send(client, text=":irc.example.com 005 bot EXTREMELY-VERBOSE-FEATURE-NAMES :Are supported by this server")
-    if client.server_supports["EXTREMELY-VERBOSE-FEATURE-NAMES"]:
-        test_isupport.success()
-    else:
-        test_isupport.failure()
+    test_isupport.succeed_if(client.server_supports["EXTREMELY-VERBOSE-FEATURE-NAMES"])
 
 manager = TestManager([
     test_ping, test_public_message_dispatch, test_private_message_dispatch,
