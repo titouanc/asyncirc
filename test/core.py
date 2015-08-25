@@ -9,17 +9,23 @@ def receive_pong(line):
 def check_example_user(u):
     return u.nick == "example" and u.user == "example" and u.host == "example.com"
 
+def try_public_thing(test, user, target, text):
+    test.succeed_if(check_example_user(user) and target == "#example" and text.startswith("example public "))
+
+def try_private_thing(test, user, text):
+    test.succeed_if(check_example_user(user) and text.startswith("example private "))
+
 def receive_public_message_signal(message, user, target, text):
-    test_public_message_dispatch.succeed_if(check_example_user(user) and target == "#example" and text == "example public message")
+    try_public_thing(test_public_message_dispatch, user, target, text)
 
 def receive_private_message_signal(message, user, target, text):
-    test_private_message_dispatch.succeed_if(check_example_user(user) and text == "example private message")
+    try_private_thing(test_private_message_dispatch, user, text)
 
 def receive_public_notice_signal(message, user, target, text):
-    test_public_notice_dispatch.succeed_if(check_example_user(user) and target == "#example" and text == "example public notice")
+    try_public_thing(test_public_notice_dispatch, user, target, text)
 
 def receive_private_notice_signal(message, user, target, text):
-    test_private_notice_dispatch.succeed_if(check_example_user(user) and text == "example private notice")
+    try_private_thing(test_private_notice_dispatch, user, text)
 
 def receive_join_signal(message, user, channel):
     test_join_dispatch.succeed_if(check_example_user(user) and channel == "#example")
