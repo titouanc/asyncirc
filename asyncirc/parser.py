@@ -71,39 +71,5 @@ class RFC1459Message(object):
 
         return cls.from_data(verb, params, source, tags)
 
-    def args_to_message(self):
-        base = []
-        for arg in self.params:
-            casted = str(arg)
-            if casted and ' ' not in casted and casted[0] != ':':
-                base.append(casted)
-            else:
-                base.append(':' + casted)
-                break
-
-        return ' '.join(base)
-
-    def to_message(self):
-        components = []
-
-        if self.tags:
-            components.append('@' + ';'.join([k + '=' + v for k, v in self.tags.items()]))
-
-        if self.source:
-            components.append(':' + self.source)
-
-        components.append(self.verb)
-
-        if self.params:
-            components.append(self.args_to_message())
-
-        return ' '.join(components)
-
-    def to_event(self):
-        return "rfc1459 message " + self.verb, self.__dict__
-
-    def serialize(self):
-        return self.__dict__
-
     def __str__(self):
         return 'RFC1459Message: "{0}"'.format(self.to_message())

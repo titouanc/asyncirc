@@ -14,7 +14,9 @@ install:
 	python setup.py install
 
 test: install
+	pip install coverage
 	cd test; python run_all.py
+	cd test; coverage run --source asyncirc run_all.py; coverage report
 
 dev-deps:
 	pip install blinker asyncio
