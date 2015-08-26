@@ -104,7 +104,14 @@ class IRCProtocol(asyncio.Protocol):
     def on(self, event):
         def process(f):
             self.logger.debug("Registering function for event {}".format(event))
-            signal(event).connect(f)
+            @functools.wraps(f)
+            def check_and_dispatch(sender, **kwargs):
+                if not isinstance(sender, RFC1459Message):
+                    f(sender, **kwargs)
+                else:
+                    if sender.client.netid == self.netid:
+                        f(sender, **kwargs)
+            signal(event).connect(check_and_dispatch)
             return f
         return process
 
