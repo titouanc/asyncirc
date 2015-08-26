@@ -2,7 +2,7 @@ localtest:
 	cd test; python run_all.py
 
 coverage:
-	cd test; coverage run --source asyncirc run_all.py; coverage html
+	cd test; coverage run --source asyncirc.plugins run_all.py; coverage html
 	cd test/htmlcov; google-chrome-stable index.html
 
 clean:
@@ -16,7 +16,7 @@ install:
 test: install
 	pip install coverage
 	cd test; python run_all.py
-	cd test; coverage run --source asyncirc run_all.py; coverage report
+	cd test; coverage run --source asyncirc.plugins run_all.py; coverage report
 
 dev-deps:
 	pip install blinker asyncio
