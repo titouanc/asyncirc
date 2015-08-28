@@ -207,6 +207,7 @@ def connect(server, port=6697, use_ssl=True):
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
     protocol.netid = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
+    signal("netid-available").send(protocol)
     connections[protocol.netid] = protocol.wrapper
     return protocol.wrapper
 
@@ -222,6 +223,7 @@ def disconnected(client_wrapper):
         protocol.server_info = client_wrapper.server_info
         protocol.netid = client_wrapper.netid
         protocol.wrapper = client_wrapper
+        signal("netid-available").send(protocol)
         client_wrapper.protocol = protocol
     asyncio.async(connector).add_done_callback(reconnected)
 

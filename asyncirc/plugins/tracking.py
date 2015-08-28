@@ -16,7 +16,7 @@ def create_registry(client):
     registries[client.netid] = Registry()
     client.tracking_registry = registries[client.netid]
 
-signal("connected").connect(create_registry)
+signal("netid-available").connect(create_registry)
 
 class User:
     def __init__(self, nick, user, host, netid=None):
