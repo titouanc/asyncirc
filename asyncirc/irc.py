@@ -72,6 +72,8 @@ class IRCProtocol(asyncio.Protocol):
         self.registration_complete = False
         self.channels_to_join = []
 
+        self.netid = "{}:{}:{}{}".format(id(self), server, port, "+" if use_ssl else "-")
+
         signal("connected").send(self)
         self.logger.info("Connection success.")
         self.process_queue()
@@ -206,7 +208,6 @@ def connect(server, port=6697, use_ssl=True):
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
-    protocol.netid = "{}:{}:{}{}".format(id(protocol), server, port, "+" if use_ssl else "-")
     connections[protocol.netid] = protocol.wrapper
     return protocol.wrapper
 
