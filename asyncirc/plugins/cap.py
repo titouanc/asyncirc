@@ -47,9 +47,13 @@ def cap_wait(netid, cap):
 
 def handle_irc_cap(message):
     if message.params[1] == "LS":
+        if message.client.netid not in capabilities_available:
+            capabilities_available[message.client.netid] = set()
         capabilities_available[message.client.netid].update(set(message.params[2].split()))
         logger.debug("Capabilities provided by server are {}".format(capabilities_available[message.client.netid]))
-        registration_state[client.netid].add("caps-known")
+        if message.client.netid not in registration_state:
+            registration_state[message.client.netid] = set()
+        registration_state[message.client.netid].add("caps-known")
         request_capabilities(message.client, capabilities_available[message.client.netid] & capabilities_requested[message.client.netid])
 
     if message.params[1] == "ACK":
