@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2015 Watchtower and other contributors (watchtowerbot.org).
+Copyright (c) 2015 Fox Wilson and GitHub contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
