@@ -214,6 +214,7 @@ def connect(server, port=6697, use_ssl=True):
 def disconnected(client_wrapper):
     client_wrapper.protocol.work = False
     client_wrapper.logger.critical("Disconnected from {}. Attempting to reconnect...".format(client_wrapper.netid))
+    signal("disconnected").send(client_wrapper.protocol)
     connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
     def reconnected(f):
         client_wrapper.logger.critical("Reconnected! {}".format(client_wrapper.netid))

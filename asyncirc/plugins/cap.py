@@ -28,6 +28,11 @@ def handle_client_create(client):
     capabilities_pending[client.netid] = set()
     client.writeln("CAP LS")
 
+def handle_client_death(client):
+    capabilities_available[client.netid] = set()
+    registration_state[client.netid] = set()
+    capabilities_pending[client.netid] = set()
+
 def check_all_caps_done(client):
     if client.netid not in capabilities_pending or not capabilities_pending[client.netid]:
         client.writeln("CAP END")
@@ -62,5 +67,6 @@ def handle_irc_cap(message):
         check_all_caps_done(message.client)
 
 signal("registration-complete").connect(registration_complete)
-signal("connected").connect(handle_client_create)
+signal("netid-available").connect(handle_client_create)
+signal("disconnected").connect(handle_client_death)
 signal("irc-cap").connect(handle_irc_cap)
