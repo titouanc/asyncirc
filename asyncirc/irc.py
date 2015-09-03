@@ -71,6 +71,7 @@ class IRCProtocol(asyncio.Protocol):
         self.caps = set()
         self.registration_complete = False
         self.channels_to_join = []
+        self.autoreconnect = True
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
@@ -215,6 +216,10 @@ def disconnected(client_wrapper):
     client_wrapper.protocol.work = False
     client_wrapper.logger.critical("Disconnected from {}. Attempting to reconnect...".format(client_wrapper.netid))
     signal("disconnected").send(client_wrapper.protocol)
+    if not client_wrapper.protocol.autoreconnect:
+        import sys
+        sys.exit(2)
+
     connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
     def reconnected(f):
         client_wrapper.logger.critical("Reconnected! {}".format(client_wrapper.netid))
