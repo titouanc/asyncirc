@@ -79,7 +79,10 @@ class IRCProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         if not self.work: return
-        data = data.decode()
+        try:
+            data = data.decode('utf-8')
+        except:
+            data = data.decode('latin-1')
 
         self.buf += data
         while "\n" in self.buf:
