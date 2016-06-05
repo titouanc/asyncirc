@@ -75,7 +75,7 @@ class IRCProtocol(asyncio.Protocol):
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
-        # self.process_queue()
+        self.process_queue()
 
     def data_received(self, data):
         if not self.work: return
@@ -140,6 +140,7 @@ class IRCProtocol(asyncio.Protocol):
             self.writeln("PASS {}".format(self.password))
         self.writeln("USER {0} {1} {0} :{2}".format(self.user, self.mode, self.realname))
         self.writeln("NICK {}".format(self.nick))
+        self.logger.debug("Sent registration information")
         signal("registration-complete").send(self)
         self.nickname = self.nick
 
