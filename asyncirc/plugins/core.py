@@ -112,6 +112,7 @@ def _redispatch_raw(client, text):
     signal("irc").send(message)
 
 def _register_client(client):
+    logger.debug("Sending real registration message")
     asyncio.get_event_loop().call_later(1, client._register)
 
 def _queue_ping(client):
