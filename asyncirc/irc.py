@@ -120,8 +120,7 @@ class IRCProtocol(asyncio.Protocol):
         """
         Queue a message for sending to the currently connected IRC server.
         """
-        # self.queue.append(line)
-        self._writeln(line)
+        self.queue.append(line)
         return self
 
     def register(self, nick, user, realname, mode="+i", password=None):
