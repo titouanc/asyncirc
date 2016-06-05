@@ -75,7 +75,7 @@ class IRCProtocol(asyncio.Protocol):
 
         signal("connected").send(self)
         self.logger.info("Connection success.")
-        self.process_queue()
+        # self.process_queue()
 
     def data_received(self, data):
         if not self.work: return
@@ -113,14 +113,15 @@ class IRCProtocol(asyncio.Protocol):
         if not isinstance(line, bytes):
             line = line.encode()
         self.logger.debug(line)
-        self.transport.get_extra_info('socket').send(line + b"\r\n")
+        self.transport.write(line + b"\r\n")
         signal("irc-send").send(line.decode())
 
     def writeln(self, line):
         """
         Queue a message for sending to the currently connected IRC server.
         """
-        self.queue.append(line)
+        # self.queue.append(line)
+        self._writeln(line)
         return self
 
     def register(self, nick, user, realname, mode="+i", password=None):
@@ -180,16 +181,16 @@ class IRCProtocol(asyncio.Protocol):
 
     ## catch-all
 
-    def __getattr__(self, attr):
-        if attr in self.__dict__:
-            return self.__dict__[attr]
+    # def __getattr__(self, attr):
+    #     if attr in self.__dict__:
+    #         return self.__dict__[attr]
 
-        def _send_command(self, *args):
-            argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
-            self.writeln("{} {}".format(attr.upper(), argstr))
+    #     def _send_command(self, *args):
+    #         argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
+    #         self.writeln("{} {}".format(attr.upper(), argstr))
 
-        _send_command.__name__ == attr
-        return _send_command
+    #     _send_command.__name__ == attr
+    #     return _send_command
 
 def get_user(hostmask):
     if "!" not in hostmask or "@" not in hostmask:
@@ -203,7 +204,9 @@ def get_target(x):
     return x
 
 def connect(server, port=6697, use_ssl=True):
-    connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
+    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+    print("Going to use this context: {}".format(context))
+    connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=context)
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}

@@ -72,4 +72,4 @@ class RFC1459Message(object):
         return cls.from_data(verb, params, source, tags)
 
     def __str__(self):
-        return 'RFC1459Message: "{0}"'.format(self.to_message())
+        return 'RFC1459Message: verb={}, params={}, source={}'.format(self.verb, self.params, self.source)
