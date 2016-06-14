@@ -2,6 +2,7 @@ import asyncirc
 import asyncirc.irc
 from blinker import signal
 from asyncirc.parser import RFC1459Message
+from collections import defaultdict
 
 class Registry:
     def __init__(self):
@@ -28,7 +29,7 @@ class User:
         self.previous_nicks = []
 
     def _get_channels(self):
-        return map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registries[self.netid].mappings))
+        return list(map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registries[self.netid].mappings)))
 
     def __repr__(self):
         return "User {}!{}@{}".format(self.nick, self.user, self.host)
@@ -43,9 +44,10 @@ class Channel:
         self.topic = ""
         self.netid = netid
         self.state = set()
+        self.flags = defaultdict(set)
 
     def _get_users(self):
-        return map(lambda x: x[0], filter(lambda x: x[1] == self.channel, registries[self.netid].mappings))
+        return list(map(lambda x: x[0], filter(lambda x: x[1] == self.channel, registries[self.netid].mappings)))
 
     def __repr__(self):
         return "Channel {}".format(self.channel)
@@ -53,6 +55,10 @@ class Channel:
     users = property(_get_users)
 
 ## utility functions
+
+def parse_prefixes(server):
+    keys, values = server.server_supports['PREFIX'][1:].split(")")
+    return {keys[i]: values[i] for i in range(len(keys))}
 
 def parse_hostmask(hostmask):
     if "!" in hostmask and "@" in hostmask:
@@ -120,6 +126,10 @@ extwho_response = signal("irc-354")
 who_response = signal("irc-352")
 who_done = signal("irc-315")
 channel_mode = signal("irc-324")
+names_response = signal("irc-353")
+names_done = signal("irc-366")
+mode_set = signal("+mode")
+mode_unset = signal("+mode")
 
 def sync_channel(client, channel):
     if client.server_supports["WHOX"]:
@@ -128,7 +138,7 @@ def sync_channel(client, channel):
         client.writeln("WHO {}".format(channel))
     client.writeln("MODE {}".format(channel))
 
-sync_complete_set = {"mode", "who"}
+sync_complete_set = {"mode", "who", "names"}
 def check_sync_done(message, channel):
     if get_channel(message, channel).state == sync_complete_set:
         signal("sync-done").send(channel)
@@ -158,6 +168,21 @@ def handle_who_response(message):
     mynick, channel, ident, host, server, nick, state, realname = message.params
     user = get_user(message, "{}!{}@{}".format(nick, ident, host))
     handle_join(message, user, channel, real=False)
+
+@names_response.connect
+def handle_names_response(message):
+    mynick, dummy, channel, names = message.params
+    prefixes = parse_prefixes(message.client)
+    for name in names.split():
+        if name[0] in prefixes:
+            get_channel(message, channel).flags[name[0]].add(name[1:])
+
+@names_done.connect
+def handle_names_done(message):
+    mynick, channel = message.params
+    channel_obj = get_channel(message, channel)
+    channel_obj.state = channel_obj.state | {"names"}
+    check_sync_done(message, channel)
 
 @channel_mode.connect
 def handle_received_mode(message):
@@ -221,5 +246,17 @@ def handle_nick(message, user, new_nick):
     user.nick = new_nick
     del message.client.tracking_registry.users[old_nick]
     message.client.tracking_registry.users[new_nick] = user
+
+@mode_set.connect
+def handle_mode_set(message, mode, arg, user, channel):
+    prefixes = parse_prefixes(message.client)
+    if mode in prefixes:
+        get_channel(message, channel).flags[prefixes[mode]].add(arg)
+
+@mode_unset.connect
+def handle_mode_unset(message, mode, arg, user, channel):
+    prefixes = parse_prefixes(message.client)
+    if mode in prefixes:
+        get_channel(message, channel).flags[prefixes[mode]].discard(arg)
 
 signal("plugin-registered").send("asyncirc.plugins.tracking")
