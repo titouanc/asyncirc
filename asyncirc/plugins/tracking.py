@@ -174,7 +174,7 @@ def handle_names_response(message):
     mynick, dummy, channel, names = message.params
     prefixes = parse_prefixes(message.client)
     for name in names.split():
-        if name[0] in prefixes:
+        if name[0] in prefixes.values():
             get_channel(message, channel).flags[name[0]].add(name[1:])
 
 @names_done.connect
