@@ -138,10 +138,10 @@ def sync_channel(client, channel):
         client.writeln("WHO {}".format(channel))
     client.writeln("MODE {}".format(channel))
 
-sync_complete_set = {"mode", "who", "names"}
+sync_complete_set = {"mode", "who"}
 def check_sync_done(message, channel):
     if get_channel(message, channel).state == sync_complete_set:
-        signal("sync-done").send(channel)
+        signal("sync-done").send(message, channel=channel)
 
 ## event handlers
 
@@ -173,16 +173,16 @@ def handle_who_response(message):
 def handle_names_response(message):
     mynick, dummy, channel, names = message.params
     prefixes = parse_prefixes(message.client)
-    for name in names.split():
-        if name[0] in prefixes.values():
-            get_channel(message, channel).flags[name[0]].add(name[1:])
+    # for name in names.split():
+    #     if name[0] in prefixes.values():
+    #         get_channel(message, channel).flags[name[0]].add(name[1:])
 
 @names_done.connect
 def handle_names_done(message):
     mynick, channel = message.params
     channel_obj = get_channel(message, channel)
-    channel_obj.state = channel_obj.state | {"names"}
-    check_sync_done(message, channel)
+    # channel_obj.state = channel_obj.state | {"names"}
+    # check_sync_done(message, channel)
 
 @channel_mode.connect
 def handle_received_mode(message):
