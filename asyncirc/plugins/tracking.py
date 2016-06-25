@@ -179,6 +179,7 @@ def handle_names_response(message):
 
 @names_done.connect
 def handle_names_done(message):
+    return
     mynick, channel = message.params
     channel_obj = get_channel(message, channel)
     # channel_obj.state = channel_obj.state | {"names"}
