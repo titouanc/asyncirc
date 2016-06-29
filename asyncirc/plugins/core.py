@@ -78,7 +78,7 @@ def _parse_mode(message):
         signal("mode {}{}".format(flag, mode)).send(message, arg=arg, user=user, channel=channel)
 
 def _server_supports(message):
-    supports = message.params[1:]
+    supports = message.params[1:-1]  # No need for "Are supported by this server" or bot's nickname
     for feature in supports:
         if "=" in feature:
             k, v = feature.split("=")
@@ -88,9 +88,11 @@ def _server_supports(message):
 
 def _nick_in_use(message):
     message.client.old_nickname = message.client.nickname
-    s = "a{}".format("".join([random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)]))
-    message.client.nickname = s
-    message.client.writeln("NICK {}".format(s))
+    s = message.client.nick_in_use_handler()
+    def callback():
+        message.client.nickname = s
+        message.client.writeln("NICK {}".format(s))
+    loop.call_later(5, callback)
 
 def _ping_servers():
     for client in ping_clients:

@@ -4,6 +4,7 @@ import collections
 import functools
 import importlib
 import logging
+import random
 import socket
 import ssl
 from blinker import signal
@@ -178,6 +179,10 @@ class IRCProtocol(asyncio.Protocol):
         while message:
             self.writeln("PRIVMSG {} :{}".format(target_str, message[:400]))
             message = message[400:]
+
+    def nick_in_use_handler(self):
+        s = "a{}".format("".join([random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)]))
+        return s
 
     ## catch-all
 
