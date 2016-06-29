@@ -93,9 +93,9 @@ def get_user(netid_or_message, hostmask=None):
     if "." in nick: # it's probably a server
         return User(nick, nick, nick, netid)
 
-    # we don't know about this user yet, so return a dummy.
-    # this will be updated when get_user is called again with the same nick
-    # and a full hostmask
+    # We don't know about this user yet, so return a dummy.
+    # This will be updated when get_user is called again with the same nick
+    # and a full hostmask. This should be really rare.
     # FIXME it would probably be a good idea to /whois here
     registry.users[nick] = User(nick, None, None, netid)
     return registry.users[nick]
