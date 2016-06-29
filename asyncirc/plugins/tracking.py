@@ -56,7 +56,7 @@ class Channel:
 
 ## utility functions
 
-def parse_prefixes(server):
+def parse_prefixes(server): # -> {'v': '+', ...}
     keys, values = server.server_supports['PREFIX'][1:].split(")")
     return {keys[i]: values[i] for i in range(len(keys))}
 
@@ -129,7 +129,7 @@ channel_mode = signal("irc-324")
 names_response = signal("irc-353")
 names_done = signal("irc-366")
 mode_set = signal("+mode")
-mode_unset = signal("+mode")
+mode_unset = signal("-mode")
 
 def sync_channel(client, channel):
     if client.server_supports["WHOX"]:
@@ -173,17 +173,21 @@ def handle_who_response(message):
 def handle_names_response(message):
     mynick, dummy, channel, names = message.params
     prefixes = parse_prefixes(message.client)
-    # for name in names.split():
-    #     if name[0] in prefixes.values():
-    #         get_channel(message, channel).flags[name[0]].add(name[1:])
+    for name in names.split():
+        prefixes = []
+
+        while name[0] in prefixes.values():  # multi-prefix support
+            prefixes.append(name.pop(0))
+
+        for prefix in prefixes:
+            get_channel(message, channel).flags[prefix].add(name)
 
 @names_done.connect
 def handle_names_done(message):
-    return
-    mynick, channel = message.params
+    mynick, channel, dummy = message.params
     channel_obj = get_channel(message, channel)
-    # channel_obj.state = channel_obj.state | {"names"}
-    # check_sync_done(message, channel)
+    channel_obj.state = channel_obj.state | {"names"}
+    check_sync_done(message, channel)
 
 @channel_mode.connect
 def handle_received_mode(message):
