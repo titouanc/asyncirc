@@ -177,7 +177,7 @@ def handle_names_response(message):
         name_list = list(name)
         applicable_prefixes = []
 
-        while name[0] in prefixes.values():  # multi-prefix support
+        while name_list[0] in prefixes.values():  # multi-prefix support
             applicable_prefixes.append(name_list.pop(0))
 
         for prefix in applicable_prefixes:
