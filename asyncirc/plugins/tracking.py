@@ -174,12 +174,12 @@ def handle_names_response(message):
     mynick, dummy, channel, names = message.params
     prefixes = parse_prefixes(message.client)
     for name in names.split():
-        prefixes = []
+        applicable_prefixes = []
 
         while name[0] in prefixes.values():  # multi-prefix support
-            prefixes.append(name.pop(0))
+            applicable_prefixes.append(name.pop(0))
 
-        for prefix in prefixes:
+        for prefix in applicable_prefixes:
             get_channel(message, channel).flags[prefix].add(name)
 
 @names_done.connect
