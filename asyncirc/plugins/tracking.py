@@ -138,7 +138,7 @@ def sync_channel(client, channel):
         client.writeln("WHO {}".format(channel))
     client.writeln("MODE {}".format(channel))
 
-sync_complete_set = {"mode", "who"}
+sync_complete_set = {"mode", "who", "names"}
 def check_sync_done(message, channel):
     if get_channel(message, channel).state == sync_complete_set:
         signal("sync-done").send(message, channel=channel)
