@@ -115,7 +115,7 @@ join = signal("join")
 extjoin = signal("irc-join")
 account = signal("irc-account")
 part = signal("part")
-quit = signal("quit")
+quit_ = signal("quit")
 kick = signal("kick")
 nick = signal("nick")
 topic = signal("irc-332")
@@ -231,7 +231,7 @@ def handle_part(message, user, channel, reason):
         get_channel(message, channel).available = False
     message.client.tracking_registry.mappings.discard((user.nick, channel))
 
-@quit.connect
+@quit_.connect
 def handle_quit(message, user, reason):
     user = get_user(message, user.nick)
     del message.client.tracking_registry.users[user.nick]
