@@ -10,6 +10,8 @@ pip install asyncio-irc
 
 And you're done!
 
+You can also use `setup.py` to manually install from a git version.
+
 ## Connecting
 
 ```python
