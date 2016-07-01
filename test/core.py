@@ -3,8 +3,6 @@ from asyncirc.plugins import core
 from blinker import signal
 from _mocks import Client
 
-core.attach_handlers()
-
 def receive_pong(line):
     test_ping.succeed_if(line == "PONG irc.example.com")
 
