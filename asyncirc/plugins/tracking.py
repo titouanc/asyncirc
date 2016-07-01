@@ -1,5 +1,3 @@
-import asyncirc
-import asyncirc.irc
 from blinker import signal
 from asyncirc.parser import RFC1459Message
 from collections import defaultdict
@@ -147,7 +145,7 @@ def check_sync_done(message, channel):
 
 @topic.connect
 def handle_topic_set(message):
-    mynick, channel, topic = message.params
+    channel, topic = message.params[1:]
     get_channel(message, channel).topic = topic
 
 @topic_changed.connect
@@ -158,20 +156,20 @@ def handle_topic_changed(message):
 
 @extwho_response.connect
 def handle_extwho_response(message):
-    mynick, channel, ident, host, nick, account = message.params
+    channel, ident, host, nick, account = message.params[1:]
     user = get_user(message, "{}!{}@{}".format(nick, ident, host))
     user.account = account if account != "0" else None
     handle_join(message, user, channel, real=False)
 
 @who_response.connect
 def handle_who_response(message):
-    mynick, channel, ident, host, server, nick, state, realname = message.params
+    channel, ident, host, server, nick, state, realname = message.params[1:]
     user = get_user(message, "{}!{}@{}".format(nick, ident, host))
     handle_join(message, user, channel, real=False)
 
 @names_response.connect
 def handle_names_response(message):
-    mynick, dummy, channel, names = message.params
+    dummy, channel, names = message.params[1:]
     prefixes = parse_prefixes(message.client)
     for name in names.split():
         name_list = list(name)
@@ -185,7 +183,7 @@ def handle_names_response(message):
 
 @names_done.connect
 def handle_names_done(message):
-    mynick, channel, dummy = message.params
+    channel, dummy = message.params[1:]
     channel_obj = get_channel(message, channel)
     channel_obj.state = channel_obj.state | {"names"}
     check_sync_done(message, channel)

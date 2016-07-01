@@ -1,14 +1,10 @@
 import asyncio
-import base64
 import collections
-import functools
 import importlib
 import logging
 import random
-import socket
 import ssl
 from blinker import signal
-from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
 
 connections = {}
@@ -244,3 +240,4 @@ def disconnected(client_wrapper):
 signal("connection-lost").connect(disconnected)
 
 import asyncirc.plugins.core
+asyncirc.plugins.core.attach_handlers()

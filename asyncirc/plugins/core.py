@@ -4,7 +4,6 @@ from asyncirc.parser import RFC1459Message
 
 import asyncio
 import logging
-import random
 import time
 logger = logging.getLogger("asyncirc.plugins.core")
 
@@ -127,19 +126,20 @@ def _connection_registered(message):
     for channel in message.client.channels_to_join:
         message.client.join(channel)
 
-signal("raw").connect(_redispatch_raw)
-signal("irc").connect(_redispatch_irc)
-signal("connected").connect(_register_client)
-signal("irc-ping").connect(_pong)
-signal("irc-pong").connect(_catch_pong)
-signal("irc-privmsg").connect(_redispatch_privmsg)
-signal("irc-notice").connect(_redispatch_notice)
-signal("irc-join").connect(_redispatch_join)
-signal("irc-part").connect(_redispatch_part)
-signal("irc-quit").connect(_redispatch_quit)
-signal("irc-kick").connect(_redispatch_kick)
-signal("irc-nick").connect(_redispatch_nick)
-signal("irc-mode").connect(_parse_mode)
-signal("irc-005").connect(_server_supports)
-signal("irc-433").connect(_nick_in_use)
-signal("irc-001").connect(_connection_registered)
+def attach_handlers():
+    signal("raw").connect(_redispatch_raw)
+    signal("irc").connect(_redispatch_irc)
+    signal("connected").connect(_register_client)
+    signal("irc-ping").connect(_pong)
+    signal("irc-pong").connect(_catch_pong)
+    signal("irc-privmsg").connect(_redispatch_privmsg)
+    signal("irc-notice").connect(_redispatch_notice)
+    signal("irc-join").connect(_redispatch_join)
+    signal("irc-part").connect(_redispatch_part)
+    signal("irc-quit").connect(_redispatch_quit)
+    signal("irc-kick").connect(_redispatch_kick)
+    signal("irc-nick").connect(_redispatch_nick)
+    signal("irc-mode").connect(_parse_mode)
+    signal("irc-005").connect(_server_supports)
+    signal("irc-433").connect(_nick_in_use)
+    signal("irc-001").connect(_connection_registered)
