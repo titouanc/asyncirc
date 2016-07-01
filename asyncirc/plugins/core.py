@@ -1,5 +1,5 @@
 from blinker import signal
-from asyncirc.irc import get_target, get_user, get_channel
+from asyncirc.irc import get_user
 from asyncirc.parser import RFC1459Message
 
 import asyncio
@@ -13,7 +13,7 @@ def _pong(message):
     message.client.writeln("PONG {}".format(message.params[0]))
 
 def _redispatch_message_common(message, mtype):
-    target, text = get_target(message.params[0]), message.params[1]
+    target, text = message.params[0], message.params[1]
     user = get_user(message.source)
     signal(mtype).send(message, user=user, target=target, text=text)
     if target == message.client.nickname:
@@ -29,12 +29,12 @@ def _redispatch_notice(message):
 
 def _redispatch_join(message):
     user = get_user(message.source)
-    channel = get_channel(message.params[0])
+    channel = message.params[0]
     signal("join").send(message, user=user, channel=channel)
 
 def _redispatch_part(message):
     user = get_user(message.source)
-    channel, reason = get_channel(message.params[0]), None
+    channel, reason = message.params[0], None
     if len(message.params) > 1:
         reason = message.params[1]
     signal("part").send(message, user=user, channel=channel, reason=reason)
@@ -46,7 +46,7 @@ def _redispatch_quit(message):
 
 def _redispatch_kick(message):
     kicker = get_user(message.source)
-    channel, kickee, reason = get_channel(message.params[0]), get_user(message.params[1]), message.params[2]
+    channel, kickee, reason = message.params[0], get_user(message.params[1]), message.params[2]
     signal("kick").send(message, kicker=kicker, kickee=kickee, channel=channel, reason=reason)
 
 def _redispatch_nick(message):
