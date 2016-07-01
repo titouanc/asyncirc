@@ -274,4 +274,3 @@ def disconnected(client_wrapper):
 signal("connection-lost").connect(disconnected)
 
 import asyncirc.plugins.core
-asyncirc.plugins.core.attach_handlers()
