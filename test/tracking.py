@@ -127,17 +127,24 @@ def test_nickname_track():
 def check_nickname_track():
     test_nickname_track.succeed_if("ex2" in client.tracking_registry.users["ex4"].previous_nicks)
 
-sync_done_send = Test(None, "should send sync-done when sync is done")
-def sync_done_check(channel):
-    sync_done_send.succeed_if(tracking.get_channel(client.netid, channel).state == {"who", "mode"})
-signal("sync-done").connect(sync_done_check)
+@test("should parse PREFIXES from server 005")
+def test_005_prefixes():
+    signal("raw").send(client, text=":irc.example.com 005 bot PREFIX=(ov)@+ :Are supported by this server")
+    prefixes = tracking.parse_prefixes(client)
+    test_005_prefixes.succeed_if(prefixes['v'] == '+' and prefixes['o'] == '@')
+
+@test("should parse NAMES responses and handle prefixes")
+def test_names_responses():
+    signal("raw").send(client, text=":irc.example.com 353 bot @ #example :bot +otheruser")
+    signal("raw").send(client, text=":irc.example.com 366 bot #example :End of NAMES list.")
+    test_names_responses.succeed_if("otheruser" in tracking.get_channel(client.netid, "#example").flags['+'])
 
 manager = TestManager([
     test_add_objects_to_database, test_account_recording_on_extjoin, test_host_recording,
     test_channel_membership_join_tracking, test_channel_membership_part_tracking, test_quit,
     test_kick, test_user_return_after_quit, test_topic_332, test_topic_changed,
     test_channel_has_users_property, test_whox, test_standard_who, test_initial_mode,
-    test_end_who, test_nickname_track, sync_done_send
+    test_end_who, test_nickname_track, test_005_prefixes, test_names_responses
 ])
 
 if __name__ == '__main__':
