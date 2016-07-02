@@ -16,7 +16,10 @@ install:
 test: install
 	pip install coverage
 	cd test; python run_all.py
-	cd test; coverage run --source asyncirc.plugins run_all.py; coverage report
+	cd test; coverage run --source asyncirc.plugins run_all.py; coverage report; coverage xml
+
+codacy-coverage: test
+	cd test; python-codacy-coverage -r coverage.xml
 
 dev-deps:
 	pip install blinker asyncio
