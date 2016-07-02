@@ -49,6 +49,12 @@ def receive_kick_signal(message, kicker, kickee, channel, reason):
 def receive_nick_signal(message, user, new_nick):
     test_nick_dispatch.succeed_if(check_example_user(user) and new_nick == "examp[le]")
 
+def receive_plusmode(message, mode, arg, user, channel):
+    test_mode_set.succeed_if(mode == "s")
+
+def receive_minusmode(message, mode, arg, user, channel):
+    test_mode_unset.succeed_if(mode == "u")
+
 signal("public-message").connect(receive_public_message_signal)
 signal("private-message").connect(receive_private_message_signal)
 signal("public-notice").connect(receive_public_notice_signal)
@@ -58,6 +64,8 @@ signal("part").connect(receive_part_signal)
 signal("quit").connect(receive_quit_signal)
 signal("kick").connect(receive_kick_signal)
 signal("nick").connect(receive_nick_signal)
+signal("+mode").connect(receive_plusmode)
+signal("-mode").connect(receive_minusmode)
 
 client = Client()
 
@@ -108,14 +116,23 @@ def test_nick_dispatch():
 
 @test("should recognize ISUPPORT messages and update the server_supports dict")
 def test_isupport():
-    signal("raw").send(client, text=":irc.example.com 005 bot EXTREMELY-VERBOSE-FEATURE-NAMES :Are supported by this server")
+    signal("raw").send(client, text=":irc.example.com 005 bot CHANMODES=eIbq,k,flj,CFLMPQScgimnprsutz PREFIX=(ov)@+ EXTREMELY-VERBOSE-FEATURE-NAMES :Are supported by this server")
     test_isupport.succeed_if(client.server_supports["EXTREMELY-VERBOSE-FEATURE-NAMES"])
+
+@test("should properly parse setting modes")
+def test_mode_set():
+    signal("raw").send(client, text=":irc.example.com MODE #channel +s")
+
+@test("should properly parse unsetting modes")
+def test_mode_unset():
+    signal("raw").send(client, text=":irc.example.com MODE #channel -u")
 
 manager = TestManager([
     test_ping, test_public_message_dispatch, test_private_message_dispatch,
     test_public_notice_dispatch, test_private_notice_dispatch, test_join_dispatch,
     test_part_dispatch_reason, test_part_dispatch_no_reason, test_quit_dispatch,
-    test_kick_dispatch, test_nick_dispatch, test_isupport
+    test_kick_dispatch, test_nick_dispatch, test_isupport, test_mode_set,
+    test_mode_unset
 ])
 
 if __name__ == '__main__':
