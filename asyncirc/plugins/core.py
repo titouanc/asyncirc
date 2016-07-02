@@ -28,9 +28,7 @@ def _redispatch_notice(message):
     _redispatch_message_common(message, "notice")
 
 def _redispatch_join(message):
-    user = get_user(message.source)
-    channel = message.params[0]
-    signal("join").send(message, user=user, channel=channel)
+    signal("join").send(message, user=get_user(message.source), channel=message.params[0])
 
 def _redispatch_part(message):
     user = get_user(message.source)
@@ -40,9 +38,7 @@ def _redispatch_part(message):
     signal("part").send(message, user=user, channel=channel, reason=reason)
 
 def _redispatch_quit(message):
-    user = get_user(message.source)
-    reason = message.params[0]
-    signal("quit").send(message, user=user, reason=reason)
+    signal("quit").send(message, user=get_user(message.source), reason=message.params[0])
 
 def _redispatch_kick(message):
     kicker = get_user(message.source)
