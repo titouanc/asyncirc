@@ -6,7 +6,7 @@ python:
 - 3.5-dev
 - nightly
 install: make dev-deps
-script: make test
+script: make codacy-coverage
 env:
   matrix:
     secure: ct/dSmj/0IlYywpOrAhosFAvzTNYl7mMLFxAJOQndKeB0r1QAFJgo2WKKmpLOWRdQkxiHV2gjOE/kxmrrI/URDtEJ0b+V2liAgBnYMn1oR/4rcBrhwFoazSdrLUQUrmKcrgJCSyVOcmsLtdJYnXXvhnEGFm/E2GZ9avdtMh/CaQ=
