@@ -198,7 +198,10 @@ class IRCProtocol(asyncio.Protocol):
     def say(self, target_str, message):
         """
         Send a PRIVMSG to IRC.
+        Carriage returns and line feeds are stripped to prevent bugs.
         """
+        message = message.replace("\n", "").replace("\r", "")
+
         while message:
             self.writeln("PRIVMSG {} :{}".format(target_str, message[:400]))
             message = message[400:]
