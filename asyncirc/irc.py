@@ -129,7 +129,7 @@ class IRCProtocol(asyncio.Protocol):
         Send a raw message to IRC immediately.
         """
         if not isinstance(line, bytes):
-            line = line.encode()
+            line = line.encode("utf-8")
         self.logger.debug(line)
         self.transport.write(line + b"\r\n")
         signal("irc-send").send(line.decode())
