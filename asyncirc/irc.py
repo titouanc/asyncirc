@@ -70,6 +70,7 @@ class IRCProtocol(asyncio.Protocol):
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
         self.last_ping = float('inf')
         self.last_pong = 0
+        self.lag = 0
         self.buf = ""
         self.old_nickname = None
         self.nickname = ""

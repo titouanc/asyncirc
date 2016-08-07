@@ -99,6 +99,7 @@ def _ping_servers():
 
 def _catch_pong(message):
     message.client.last_pong = time.time()
+    message.client.lag = message.client.last_pong - message.client.last_ping
 
 def _redispatch_irc(message):
     signal("irc-{}".format(message.verb.lower())).send(message)
