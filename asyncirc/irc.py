@@ -229,7 +229,7 @@ class IRCProtocol(asyncio.Protocol):
 
 def get_user(hostmask):
     if "!" not in hostmask or "@" not in hostmask:
-        return hostmask
+        return User(hostmask, hostmask, hostmask)
     return User.from_hostmask(hostmask)
 
 def connect(server, port=6697, use_ssl=True):
