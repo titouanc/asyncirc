@@ -55,10 +55,11 @@ def _redispatch_nick(message):
 def _parse_mode(message):
     # :ChanServ!ChanServ@services. MODE ##fwilson +o fwilson
     if "CHANMODES" in message.client.server_supports:
-        argument_modes = message.client.server_supports["CHANMODES"].split(",")[:-1]
+        argument_modes = "".join(message.client.server_supports["CHANMODES"].split(",")[:-1])
         argument_modes += message.client.server_supports["PREFIX"].split(")")[0][1:]
     else:
-        argument_modes = ""
+        argument_modes = "beIqaohvlk"
+    print("argument_modes are", argument_modes)
     user = get_user(message.source)
     channel = message.params[0]
     modes = message.params[1]

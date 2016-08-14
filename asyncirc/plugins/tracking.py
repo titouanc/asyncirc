@@ -26,6 +26,9 @@ class User:
         self.netid = netid
         self.previous_nicks = []
 
+    def hostmask(self):
+        return "{}!{}@{}".format(self.nick, self.user, self.host)
+
     def _get_channels(self):
         return list(map(lambda x: x[1], filter(lambda x: x[0] == self.nick, registries[self.netid].mappings)))
 

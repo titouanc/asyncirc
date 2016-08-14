@@ -236,9 +236,7 @@ def connect(server, port=6697, use_ssl=True):
     """
     Connect to an IRC server. Returns a proxy to an IRCProtocol object.
     """
-    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-    print("Going to use this context: {}".format(context))
-    connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=context)
+    connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
     protocol.server_info = {"host": server, "port": port, "ssl": use_ssl}
