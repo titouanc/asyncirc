@@ -254,6 +254,13 @@ def handle_nick(message, user, new_nick):
     del message.client.tracking_registry.users[old_nick]
     message.client.tracking_registry.users[new_nick] = user
 
+    mappings = set(message.client.tracking_registry.mappings)
+    original_mappings = message.client.tracking_registry.mappings
+    for i in mappings:
+        if i[0] == old_nick:
+            original_mappings.discard(i)
+            original_mappings.add((new_nick, i[1]))
+
 @mode_set.connect
 def handle_mode_set(message, mode, arg, user, channel):
     prefixes = parse_prefixes(message.client)
