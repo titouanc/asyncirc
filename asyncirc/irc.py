@@ -1,13 +1,10 @@
 import asyncio
-import base64
 import collections
-import functools
 import importlib
 import logging
-import socket
+import random
 import ssl
 from blinker import signal
-from .parser import RFC1459Message
 loop = asyncio.get_event_loop()
 
 connections = {}
@@ -24,6 +21,9 @@ def load_plugins(*plugins):
             importlib.import_module(plugin)
 
 class User:
+    """
+    Represents a user on IRC, with their nickname, username, and hostname.
+    """
     def __init__(self, nick, user, host):
         self.nick = nick
         self.user = user
@@ -40,6 +40,10 @@ class User:
         return self(None, None, hostmask)
 
 class IRCProtocolWrapper:
+    """
+    Wraps an IRCProtocol object to allow for automatic reconnection. Only used
+    internally.
+    """
     def __init__(self, protocol):
         self.protocol = protocol
 
@@ -55,6 +59,10 @@ class IRCProtocolWrapper:
             setattr(self.protocol, attr, val)
 
 class IRCProtocol(asyncio.Protocol):
+    """
+    Represents a connection to IRC.
+    """
+
     def connection_made(self, transport):
         self.work = True
         self.transport = transport
@@ -62,6 +70,7 @@ class IRCProtocol(asyncio.Protocol):
         self.logger = logging.getLogger("asyncirc.IRCProtocol")
         self.last_ping = float('inf')
         self.last_pong = 0
+        self.lag = 0
         self.buf = ""
         self.old_nickname = None
         self.nickname = ""
@@ -100,6 +109,10 @@ class IRCProtocol(asyncio.Protocol):
     ## Core helper functions
 
     def process_queue(self):
+        """
+        Pull data from the pending messages queue and send it. Schedule ourself
+        to be executed again later.
+        """
         if not self.work: return
         if self.queue:
             self._writeln(self.queue.pop(0))
@@ -107,16 +120,22 @@ class IRCProtocol(asyncio.Protocol):
 
     def on(self, event):
         def process(f):
+            """
+            Register an event with Blinker. Convienence function.
+            """
             self.logger.debug("Registering function for event {}".format(event))
             signal(event).connect(f)
             return f
         return process
 
     def _writeln(self, line):
+        """
+        Send a raw message to IRC immediately.
+        """
         if not isinstance(line, bytes):
-            line = line.encode()
+            line = line.encode("utf-8")
         self.logger.debug(line)
-        self.transport.get_extra_info('socket').send(line + b"\r\n")
+        self.transport.write(line + b"\r\n")
         signal("irc-send").send(line.decode())
 
     def writeln(self, line):
@@ -139,10 +158,14 @@ class IRCProtocol(asyncio.Protocol):
         return self
 
     def _register(self):
+        """
+        Send registration messages to IRC.
+        """
         if self.password:
             self.writeln("PASS {}".format(self.password))
         self.writeln("USER {0} {1} {0} :{2}".format(self.user, self.mode, self.realname))
         self.writeln("NICK {}".format(self.nick))
+        self.logger.debug("Sent registration information")
         signal("registration-complete").send(self)
         self.nickname = self.nick
 
@@ -177,35 +200,45 @@ class IRCProtocol(asyncio.Protocol):
         self.writeln("PART {}".format(channels_str))
 
     def say(self, target_str, message):
+        """
+        Send a PRIVMSG to IRC.
+        Carriage returns and line feeds are stripped to prevent bugs.
+        """
+        message = message.replace("\n", "").replace("\r", "")
+
         while message:
             self.writeln("PRIVMSG {} :{}".format(target_str, message[:400]))
             message = message[400:]
 
+    def nick_in_use_handler(self):
+        """
+        Choose a nickname to use if the requested one is already in use.
+        """
+        s = "a{}".format("".join([random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)]))
+        return s
+
     ## catch-all
 
-    def __getattr__(self, attr):
-        if attr in self.__dict__:
-            return self.__dict__[attr]
+    # def __getattr__(self, attr):
+    #     if attr in self.__dict__:
+    #         return self.__dict__[attr]
 
-        def _send_command(self, *args):
-            argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
-            self.writeln("{} {}".format(attr.upper(), argstr))
+    #     def _send_command(self, *args):
+    #         argstr = " ".join(args[:-1]) + " :{}".format(args[-1])
+    #         self.writeln("{} {}".format(attr.upper(), argstr))
 
-        _send_command.__name__ == attr
-        return _send_command
+    #     _send_command.__name__ == attr
+    #     return _send_command
 
 def get_user(hostmask):
     if "!" not in hostmask or "@" not in hostmask:
-        return hostmask
+        return User(hostmask, hostmask, hostmask)
     return User.from_hostmask(hostmask)
 
-def get_channel(channel):
-    return channel
-
-def get_target(x):
-    return x
-
 def connect(server, port=6697, use_ssl=True):
+    """
+    Connect to an IRC server. Returns a proxy to an IRCProtocol object.
+    """
     connector = loop.create_connection(IRCProtocol, host=server, port=port, ssl=use_ssl)
     transport, protocol = loop.run_until_complete(connector)
     protocol.wrapper = IRCProtocolWrapper(protocol)
@@ -216,6 +249,10 @@ def connect(server, port=6697, use_ssl=True):
     return protocol.wrapper
 
 def disconnected(client_wrapper):
+    """
+    Either reconnect the IRCProtocol object, or exit, depending on
+    configuration. Called by IRCProtocol when we lose the connection.
+    """
     client_wrapper.protocol.work = False
     client_wrapper.logger.critical("Disconnected from {}. Attempting to reconnect...".format(client_wrapper.netid))
     signal("disconnected").send(client_wrapper.protocol)
@@ -225,6 +262,9 @@ def disconnected(client_wrapper):
 
     connector = loop.create_connection(IRCProtocol, **client_wrapper.server_info)
     def reconnected(f):
+        """
+        Callback function for a successful reconnection.
+        """
         client_wrapper.logger.critical("Reconnected! {}".format(client_wrapper.netid))
         _, protocol = f.result()
         protocol.register(client_wrapper.nick, client_wrapper.user, client_wrapper.realname, client_wrapper.mode, client_wrapper.password)
